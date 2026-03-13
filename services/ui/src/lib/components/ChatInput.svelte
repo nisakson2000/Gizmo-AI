@@ -1,10 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { generating, addUserMessage } from '$lib/stores/chat';
 	import { send } from '$lib/ws/client';
 	import { connectionStatus } from '$lib/stores/connection';
 
 	let input = $state('');
 	let textarea: HTMLTextAreaElement;
+	let sendBtn: HTMLButtonElement;
+	let uploadBtn: HTMLButtonElement;
+	let micBtn: HTMLButtonElement;
 	let recording = $state(false);
 	let mediaRecorder: MediaRecorder | null = null;
 
@@ -19,13 +23,6 @@
 		}
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleSubmit();
-		}
-	}
-
 	function autoResize() {
 		if (textarea) {
 			textarea.style.height = 'auto';
@@ -34,10 +31,10 @@
 	}
 
 	function handleFileUpload() {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = 'image/*,.pdf,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.csv';
-		input.onchange = async (e) => {
+		const inp = document.createElement('input');
+		inp.type = 'file';
+		inp.accept = 'image/*,.pdf,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.csv';
+		inp.onchange = async (e) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
 			if (!file) return;
 
@@ -64,7 +61,7 @@
 				// Upload failed
 			}
 		};
-		input.click();
+		inp.click();
 	}
 
 	async function toggleRecording() {
@@ -104,12 +101,26 @@
 			// Mic access denied
 		}
 	}
+
+	// Use direct addEventListener to bypass Svelte 5 event delegation
+	onMount(() => {
+		textarea.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Enter' && !e.shiftKey) {
+				e.preventDefault();
+				handleSubmit();
+			}
+		});
+		textarea.addEventListener('input', autoResize);
+		sendBtn.addEventListener('click', handleSubmit);
+		uploadBtn.addEventListener('click', handleFileUpload);
+		micBtn.addEventListener('click', toggleRecording);
+	});
 </script>
 
 <div class="border-t border-border bg-bg-secondary p-3">
 	<div class="flex items-end gap-2 max-w-4xl mx-auto">
 		<button
-			onclick={handleFileUpload}
+			bind:this={uploadBtn}
 			class="p-2 text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
 			aria-label="Upload file"
 			disabled={$generating}
@@ -120,7 +131,7 @@
 		</button>
 
 		<button
-			onclick={toggleRecording}
+			bind:this={micBtn}
 			class="p-2 flex-shrink-0 transition-colors {recording ? 'text-error animate-pulse' : 'text-text-secondary hover:text-text-primary'}"
 			aria-label={recording ? 'Stop recording' : 'Record audio'}
 		>
@@ -132,8 +143,6 @@
 		<textarea
 			bind:this={textarea}
 			bind:value={input}
-			onkeydown={handleKeydown}
-			oninput={autoResize}
 			placeholder={$connectionStatus === 'connected' ? 'Message Gizmo...' : 'Connecting...'}
 			disabled={$connectionStatus === 'disconnected'}
 			rows="1"
@@ -141,7 +150,7 @@
 		></textarea>
 
 		<button
-			onclick={handleSubmit}
+			bind:this={sendBtn}
 			disabled={$generating || !input.trim()}
 			class="p-2 rounded-lg flex-shrink-0 transition-colors {$generating || !input.trim()
 				? 'text-text-dim bg-bg-tertiary'

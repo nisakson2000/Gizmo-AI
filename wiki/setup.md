@@ -6,10 +6,10 @@ Complete setup guide from a fresh Linux machine. Target audience: someone techni
 
 ## Before You Start
 
-You are about to set up a stack of 6 containerized services that work together to run a 27-billion parameter language model on your GPU. This involves:
+You are about to set up a stack of 6 containerized services that work together to run a 9-billion parameter language model and a neural TTS model on your GPU. This involves:
 
 - Building software from source (llama.cpp with CUDA support)
-- Downloading a ~20GB model file from HuggingFace
+- Downloading a ~10GB LLM and ~4GB TTS model from HuggingFace
 - Running containers via Podman (or Docker)
 
 **Estimated time:** 1-2 hours on first setup. After that, starting Gizmo takes ~30 seconds.
@@ -17,22 +17,22 @@ You are about to set up a stack of 6 containerized services that work together t
 ## Hardware Requirements
 
 ### GPU (Most Important)
-You need an **NVIDIA GPU with 20GB+ VRAM**. The model weights (Q5_K_M quantization) are 19.4GB and must fit entirely in VRAM. The RTX 4090 (24GB) is the tested configuration with comfortable headroom.
+You need an **NVIDIA GPU with 16GB+ VRAM**. The LLM weights (Q8_0 quantization) are ~9.5GB and Qwen3-TTS adds ~4GB when active — total peak ~16.8GB. The RTX 4090 (24GB) is the tested configuration with comfortable headroom.
 
 If you have less VRAM:
-- 16GB VRAM → use Q4_K_M (~16GB file, good quality)
-- 12GB VRAM → use Q3_K_M (~13GB, usable but noticeable quality loss)
+- 16GB VRAM → use Q8_0 (fits with TTS, tight but works)
+- 12GB VRAM → use Q4_K_M (~5.5GB LLM + 4GB TTS = ~10GB)
 
 AMD GPUs are not supported (llama.cpp CUDA build required).
 
 ### RAM
-**32GB minimum.** The orchestrator, Whisper, SearXNG, and Kokoro all run on CPU and use system RAM. 64GB recommended for comfortable headroom.
+**32GB minimum.** The orchestrator, Whisper, and SearXNG run on CPU and use system RAM. 64GB recommended for comfortable headroom.
 
 ### Disk
-**100GB free space.** Breakdown: model file (19GB), container images (~10GB), mmproj vision file (600MB), logs and memory (variable).
+**50GB free space.** Breakdown: LLM model file (~9.5GB), TTS model (~4GB), container images (~10GB), mmproj vision file (600MB), logs and memory (variable).
 
 ### CPU
-Less critical than GPU. Whisper transcription and Kokoro TTS run on CPU — more cores means faster transcription. The AMD Ryzen 9 7950X3D is the tested configuration.
+Less critical than GPU. Whisper transcription runs on CPU — more cores means faster transcription. The AMD Ryzen 9 7950X3D is the tested configuration.
 
 ---
 
@@ -118,17 +118,21 @@ bash scripts/download-model.sh
 ```
 
 This downloads:
-- **Main model:** `Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf` (~19.4GB)
-- **Vision projector:** `Huihui-Qwen3.5-27B-abliterated.mmproj-Q8_0.gguf` (~600MB)
+- **Main model:** `Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf` (~9.5GB)
+- **Vision projector:** mmproj Q8_0 (~600MB)
+- **TTS model:** Qwen3-TTS-12Hz-1.7B-Base (~4GB)
+- **Chat template:** `chat_template.jinja` (handles thinking, vision, and tool calling)
 
 The download is resumable — if it fails, run the script again and it will continue where it left off.
 
 **Verify:**
 ```bash
 ls -lh models/*.gguf
-# Should show ~19GB file
+# Should show ~9.5GB file
 ls -lh models/mmproj/*.gguf
 # Should show ~600MB file
+ls models/qwen3-tts/1.7B-Base/
+# Should show model files
 ```
 
 ## Step 6 — Build llama.cpp
@@ -160,8 +164,9 @@ bash scripts/start.sh
 
 The script:
 1. Checks that the model file exists
-2. Starts infrastructure services (SearXNG, Whisper, Kokoro)
-3. Starts the model server (takes 30-60 seconds to load 19GB into VRAM)
+2. Starts infrastructure services (SearXNG, Whisper)
+3. Starts the LLM server (takes 15-30 seconds to load 9.5GB into VRAM)
+4. Starts the TTS server (GPU, loads on first request)
 4. Starts the orchestrator and UI
 
 **Expected output:**
@@ -197,7 +202,7 @@ Gizmo-AI Service Health
   ✓ gizmo-llama              (port 8080)
   ✓ gizmo-orchestrator       (port 9100)
   ✓ gizmo-whisper            (port 8200)
-  ✓ gizmo-kokoro             (port 8400)
+  ✓ gizmo-tts                (port 8400)
   ✓ gizmo-searxng            (port 8300)
   ✓ gizmo-ui                 (port 3100)
 ```
@@ -244,9 +249,10 @@ sudo firewall-cmd --reload
 - Browser mic permission requires HTTPS or localhost
 - Check container: `podman logs gizmo-whisper`
 
-### Kokoro TTS silent
+### Qwen3-TTS silent
 - Check container health: `curl http://localhost:8400/health`
 - Check TTS toggle in UI settings
+- TTS auto-unloads after 60s idle — first request after idle takes longer
 
 ### Tailscale not reaching UI
 - Verify both devices are on same Tailnet: `tailscale status`

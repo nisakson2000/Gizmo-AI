@@ -23,15 +23,16 @@ services:
     security_opt:
       - label=disable
     command: >
-      --model /models/Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf
+      --model /models/Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf
       --host 0.0.0.0
       --port 8080
-      --ctx-size 16384
+      --ctx-size 32768
       --n-gpu-layers 99
       --flash-attn on
       --threads 8
       --parallel 4
       --cont-batching
+      --chat-template-file /models/chat_template.jinja
       --log-disable
     restart: unless-stopped
     healthcheck:
@@ -39,7 +40,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 120s
+      start_period: 60s
 
   gizmo-whisper:
     image: docker.io/fedirz/faster-whisper-server:latest-cpu
@@ -71,20 +72,33 @@ services:
       - SEARXNG_BASE_URL=http://localhost:8300
     restart: unless-stopped
 
-  gizmo-kokoro:
-    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2
-    container_name: gizmo-kokoro
+  gizmo-tts:
+    build:
+      context: ./services/tts
+      dockerfile: Dockerfile
+    image: gizmo-tts:latest
+    container_name: gizmo-tts
     networks:
       - gizmo-net
     ports:
-      - "8400:8880"
+      - "8400:8400"
+    volumes:
+      - ./models/qwen3-tts:/models/qwen3-tts:ro,Z
+    devices:
+      - nvidia.com/gpu=all
+    security_opt:
+      - label=disable
+    environment:
+      - TTS_MODEL_DIR=/models/qwen3-tts/1.7B-Base
+      - TTS_TOKENIZER_DIR=/models/qwen3-tts/tokenizer
+      - TTS_IDLE_UNLOAD_SECONDS=60
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8880/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8400/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 90s
 
   gizmo-orchestrator:
     build:
@@ -107,8 +121,8 @@ services:
       - WHISPER_PORT=8000
       - SEARXNG_HOST=gizmo-searxng
       - SEARXNG_PORT=8080
-      - KOKORO_HOST=gizmo-kokoro
-      - KOKORO_PORT=8880
+      - TTS_HOST=gizmo-tts
+      - TTS_PORT=8400
     depends_on:
       - gizmo-llama
     restart: unless-stopped

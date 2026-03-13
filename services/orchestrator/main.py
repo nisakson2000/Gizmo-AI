@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
@@ -39,8 +39,8 @@ WHISPER_URL = f"http://{WHISPER_HOST}:{WHISPER_PORT}"
 SEARXNG_HOST = os.getenv("SEARXNG_HOST", "gizmo-searxng")
 SEARXNG_PORT = os.getenv("SEARXNG_PORT", "8080")
 
-KOKORO_HOST = os.getenv("KOKORO_HOST", "gizmo-kokoro")
-KOKORO_PORT = os.getenv("KOKORO_PORT", "8880")
+TTS_HOST = os.getenv("TTS_HOST", "gizmo-tts")
+TTS_PORT = os.getenv("TTS_PORT", "8400")
 
 CONSTITUTION_PATH = Path("/app/config/constitution.txt")
 DB_PATH = Path("/app/memory/conversations.db")
@@ -290,7 +290,7 @@ async def services_health():
         ("llama", f"{LLAMA_URL}/health"),
         ("whisper", f"{WHISPER_URL}/health"),
         ("searxng", f"http://{SEARXNG_HOST}:{SEARXNG_PORT}/"),
-        ("kokoro", f"http://{KOKORO_HOST}:{KOKORO_PORT}/health"),
+        ("tts", f"http://{TTS_HOST}:{TTS_PORT}/health"),
     ]
     async with httpx.AsyncClient(timeout=5.0) as client:
         for name, url in checks:
@@ -409,7 +409,7 @@ async def ws_chat(ws: WebSocket):
                     audio_b64 = base64.b64encode(audio_data).decode()
                     await ws.send_json({
                         "type": "audio",
-                        "url": f"data:audio/mp3;base64,{audio_b64}",
+                        "url": f"data:audio/wav;base64,{audio_b64}",
                     })
 
             # Save assistant response
@@ -626,11 +626,19 @@ async def api_search(q: str):
 
 
 @app.post("/api/tts")
-async def api_tts(
-    text: str = Form(...),
-    voice: str = Form("af_heart"),
-):
+async def api_tts(request: Request):
+    """Synthesize speech from text via Qwen3-TTS."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+
+    text = body.get("text", "")
+    voice = body.get("voice", "default")
+    if not text:
+        return JSONResponse(status_code=400, content={"error": "Missing 'text' field"})
+
     audio = await synthesize(text, voice)
     if audio is None:
         return JSONResponse(status_code=503, content={"error": "TTS service unavailable"})
-    return Response(content=audio, media_type="audio/mp3")
+    return Response(content=audio, media_type="audio/wav")

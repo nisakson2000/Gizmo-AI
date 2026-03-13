@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
 		conversations,
 		activeConversationId,
@@ -9,6 +10,9 @@
 	import { sidebarOpen, settingsOpen } from '$lib/stores/settings';
 
 	let search = $state('');
+	let listEl: HTMLDivElement;
+	let newChatBtn: HTMLButtonElement;
+	let settingsBtn: HTMLButtonElement;
 
 	let filtered = $derived(
 		$conversations.filter((c) => c.title.toLowerCase().includes(search.toLowerCase()))
@@ -26,13 +30,36 @@
 			return '';
 		}
 	}
+
+	onMount(() => {
+		newChatBtn.addEventListener('click', () => newConversation());
+		settingsBtn.addEventListener('click', () => settingsOpen.update((v) => !v));
+
+		listEl.addEventListener('click', (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+
+			const deleteBtn = target.closest('[data-action="delete"]') as HTMLElement | null;
+			if (deleteBtn) {
+				e.stopPropagation();
+				const id = deleteBtn.dataset.convId;
+				if (id) deleteConversation(id);
+				return;
+			}
+
+			const row = target.closest('[data-conv-id]') as HTMLElement | null;
+			if (row) {
+				const id = row.dataset.convId;
+				if (id) loadConversation(id);
+			}
+		});
+	});
 </script>
 
 {#if $sidebarOpen}
 	<aside class="w-64 flex-shrink-0 bg-bg-secondary border-r border-border flex flex-col h-full">
 		<div class="p-3">
 			<button
-				onclick={() => newConversation()}
+				bind:this={newChatBtn}
 				class="w-full px-3 py-2 rounded bg-accent hover:bg-accent-dim text-white text-sm font-medium transition-colors"
 			>
 				+ New Chat
@@ -48,19 +75,17 @@
 			/>
 		</div>
 
-		<div class="flex-1 overflow-y-auto px-2">
+		<div class="flex-1 overflow-y-auto px-2" bind:this={listEl}>
 			{#each filtered as conv (conv.id)}
 				<div
-					role="button"
-					tabindex="0"
-					onclick={() => loadConversation(conv.id)}
-					onkeydown={(e) => { if (e.key === 'Enter') loadConversation(conv.id); }}
+					data-conv-id={conv.id}
 					class="w-full text-left px-3 py-2 rounded mb-0.5 flex items-center justify-between group transition-colors cursor-pointer {$activeConversationId === conv.id ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'}"
 				>
 					<span class="truncate text-sm flex-1">{conv.title}</span>
 					<span class="text-xs text-text-dim ml-2 flex-shrink-0">{formatTime(conv.updated_at)}</span>
 					<button
-						onclick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+						data-action="delete"
+						data-conv-id={conv.id}
 						class="ml-1 text-text-dim hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
 						aria-label="Delete conversation"
 					>
@@ -74,7 +99,7 @@
 
 		<div class="p-3 border-t border-border">
 			<button
-				onclick={() => settingsOpen.update((v) => !v)}
+				bind:this={settingsBtn}
 				class="w-full px-3 py-2 rounded text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors text-left"
 			>
 				Settings

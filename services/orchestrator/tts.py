@@ -1,46 +1,60 @@
-"""Kokoro TTS proxy — OpenAI-compatible text-to-speech."""
+"""Qwen3-TTS proxy — OpenAI-compatible text-to-speech."""
 
 import os
 import httpx
+import base64
+import logging
 from typing import Optional
 
-KOKORO_HOST = os.getenv("KOKORO_HOST", "gizmo-kokoro")
-KOKORO_PORT = os.getenv("KOKORO_PORT", "8880")
-KOKORO_URL = f"http://{KOKORO_HOST}:{KOKORO_PORT}/v1/audio/speech"
+TTS_HOST = os.getenv("TTS_HOST", "gizmo-tts")
+TTS_PORT = os.getenv("TTS_PORT", "8400")
+TTS_URL = f"http://{TTS_HOST}:{TTS_PORT}/v1/audio/speech"
 
-DEFAULT_VOICE = "af_heart"
-DEFAULT_MODEL = "kokoro"
+logger = logging.getLogger(__name__)
 
 
 async def synthesize(
     text: str,
-    voice: str = DEFAULT_VOICE,
-    response_format: str = "mp3",
+    voice: str = "default",
+    voice_reference_path: Optional[str] = None,
 ) -> Optional[bytes]:
-    """Generate speech from text via Kokoro TTS.
+    """Generate speech from text via Qwen3-TTS.
 
     Returns audio bytes or None on failure.
+    If voice_reference_path is provided, use it for voice cloning.
     """
+    payload = {
+        "model": "qwen3-tts",
+        "input": text,
+        "voice": voice,
+        "response_format": "wav",
+        "speed": 1.0,
+    }
+
+    if voice_reference_path and os.path.exists(voice_reference_path):
+        with open(voice_reference_path, "rb") as f:
+            payload["voice_reference"] = base64.b64encode(f.read()).decode()
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(KOKORO_URL, json={
-                "model": DEFAULT_MODEL,
-                "input": text,
-                "voice": voice,
-                "response_format": response_format,
-            })
+            resp = await client.post(TTS_URL, json=payload)
             resp.raise_for_status()
             return resp.content
     except httpx.ConnectError:
+        logger.error("Qwen3-TTS not reachable at %s", TTS_URL)
         return None
-    except Exception:
+    except httpx.HTTPStatusError as e:
+        logger.error("TTS error: %s %s", e.response.status_code, e.response.text[:200])
+        return None
+    except Exception as e:
+        logger.error("TTS error: %s", e)
         return None
 
 
 async def check_health() -> bool:
-    """Check if Kokoro TTS is available."""
+    """Check if Qwen3-TTS is available."""
     try:
-        url = f"http://{KOKORO_HOST}:{KOKORO_PORT}/health"
+        url = f"http://{TTS_HOST}:{TTS_PORT}/health"
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(url)
             return resp.status_code == 200

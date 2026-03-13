@@ -14,7 +14,7 @@
 	});
 
 	// Custom renderer to extract code blocks for our component
-	let renderedHtml = $derived(() => {
+	let renderedHtml = $derived.by(() => {
 		try {
 			return marked.parse(message.content) as string;
 		} catch {
@@ -48,7 +48,7 @@
 		{/if}
 
 		<div class="prose prose-invert max-w-none text-text-primary text-[15px] leading-[1.7]">
-			{@html renderedHtml()}
+			{@html renderedHtml}
 		</div>
 
 		{#if message.audioUrl}

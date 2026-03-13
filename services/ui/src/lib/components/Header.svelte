@@ -1,6 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { connectionStatus } from '$lib/stores/connection';
 	import { thinkingEnabled, ttsEnabled, sidebarOpen } from '$lib/stores/settings';
+
+	let sidebarBtn: HTMLButtonElement;
+	let thinkBtn: HTMLButtonElement;
+	let ttsBtn: HTMLButtonElement;
 
 	let statusColor = $derived(
 		$connectionStatus === 'connected'
@@ -9,12 +14,18 @@
 				? 'bg-accent animate-pulse'
 				: 'bg-error'
 	);
+
+	onMount(() => {
+		sidebarBtn.addEventListener('click', () => sidebarOpen.update((v) => !v));
+		thinkBtn.addEventListener('click', () => thinkingEnabled.update((v) => !v));
+		ttsBtn.addEventListener('click', () => ttsEnabled.update((v) => !v));
+	});
 </script>
 
 <header class="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-secondary">
 	<div class="flex items-center gap-3">
 		<button
-			onclick={() => sidebarOpen.update((v) => !v)}
+			bind:this={sidebarBtn}
 			class="text-text-secondary hover:text-text-primary p-1"
 			aria-label="Toggle sidebar"
 		>
@@ -28,7 +39,7 @@
 
 	<div class="flex items-center gap-3">
 		<button
-			onclick={() => thinkingEnabled.update((v) => !v)}
+			bind:this={thinkBtn}
 			class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors {$thinkingEnabled ? 'bg-accent text-white' : 'bg-bg-tertiary text-text-secondary hover:text-text-primary'}"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,7 +49,7 @@
 		</button>
 
 		<button
-			onclick={() => ttsEnabled.update((v) => !v)}
+			bind:this={ttsBtn}
 			class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors {$ttsEnabled ? 'bg-accent text-white' : 'bg-bg-tertiary text-text-secondary hover:text-text-primary'}"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

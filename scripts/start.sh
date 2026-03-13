@@ -10,11 +10,15 @@ echo "╚═══════════════════════�
 echo ""
 
 # Check model exists
-MODEL_FILE="$PROJECT_DIR/models/Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf"
+MODEL_FILE="$PROJECT_DIR/models/Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf"
 if [ ! -f "$MODEL_FILE" ]; then
-    echo "ERROR: Model file not found at $MODEL_FILE"
-    echo "Run: bash scripts/download-model.sh"
-    exit 1
+    MODEL_FILE="$PROJECT_DIR/models/Huihui-Qwen3.5-9B-abliterated.i1-Q5_K_M.gguf"
+    if [ ! -f "$MODEL_FILE" ]; then
+        echo "ERROR: No 9B model file found."
+        echo "Expected: models/Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf"
+        echo "Run: bash scripts/download-model.sh"
+        exit 1
+    fi
 fi
 
 # Check Podman is running
@@ -34,46 +38,39 @@ if ! podman image exists gizmo-llama:latest; then
     exit 1
 fi
 
-# Start infrastructure services first
+# Start CPU-only infrastructure first
 echo "Starting infrastructure services..."
-podman compose up -d gizmo-searxng gizmo-whisper gizmo-kokoro
-
-# Wait for them
+podman compose up -d gizmo-searxng gizmo-whisper
 sleep 5
 
-# Start model server
-echo "Starting model server (this may take 30-60s to load)..."
+# Start model server (GPU)
+echo "Starting LLM server (Qwen3.5-9B, ~10GB VRAM)..."
 podman compose up -d gizmo-llama
 
-# Wait for model to load
-echo "Waiting for model to load..."
-for i in $(seq 1 60); do
-    if curl -sf http://localhost:8080/health &>/dev/null; then
-        echo " ready."
-        break
-    fi
+echo "Waiting for LLM to load..."
+until curl -sf http://localhost:8080/health &>/dev/null; do
     echo -n "."
-    sleep 5
+    sleep 3
 done
+echo " ready."
 
-if ! curl -sf http://localhost:8080/health &>/dev/null; then
-    echo ""
-    echo "WARNING: Model server not responding after 5 minutes."
-    echo "Check logs: podman logs gizmo-llama"
-fi
+# Start TTS server (also GPU, loads after LLM to avoid contention)
+echo "Starting Qwen3-TTS server (~3GB VRAM)..."
+podman compose up -d gizmo-tts
+sleep 5
 
 # Start orchestrator and UI
 echo "Starting orchestrator and UI..."
 podman compose up -d gizmo-orchestrator gizmo-ui
-
 sleep 3
 
 echo ""
-echo "╔════════════════════════════════════════════╗"
-echo "║  Gizmo-AI is running                       ║"
-echo "║  UI:           http://localhost:3100        ║"
-echo "║  Orchestrator: http://localhost:9100        ║"
-echo "║  Model API:    http://localhost:8080        ║"
-echo "╚════════════════════════════════════════════╝"
+echo "╔═══════════════════════════════════════════════════════╗"
+echo "║  Gizmo-AI is running                                  ║"
+echo "║  UI:           http://localhost:3100                  ║"
+echo "║  Orchestrator: http://localhost:9100                  ║"
+echo "║  LLM API:      http://localhost:8080                  ║"
+echo "║  TTS API:      http://localhost:8400                  ║"
+echo "╚═══════════════════════════════════════════════════════╝"
 echo ""
 echo "Tailscale: access via your Tailscale IP on port 3100"

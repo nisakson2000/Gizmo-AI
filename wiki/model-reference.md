@@ -1,18 +1,18 @@
 # Model Reference
 
-Technical reference for Qwen3.5-27B and the abliterated variant used by Gizmo-AI.
+Technical reference for the models used by Gizmo-AI: Qwen3.5-9B (language) and Qwen3-TTS (speech synthesis).
 
 ---
 
-## Qwen3.5-27B — Base Model
+## Qwen3.5-9B — Language Model
 
 | Property | Value |
 |----------|-------|
 | **Developer** | Alibaba Cloud / Qwen Team |
 | **Release** | February 2025 |
 | **Architecture** | Dense transformer (NOT mixture-of-experts) |
-| **Parameters** | 27 billion |
-| **Context Window** | 262,144 tokens (native) |
+| **Parameters** | 9 billion |
+| **Context Window** | 262,144 tokens (native), 32,768 configured |
 | **Training Data** | Multilingual text, code, reasoning, instruction-following |
 | **Modality** | Text + vision (natively multimodal) |
 | **Thinking** | Hybrid — supports `<think>` reasoning blocks |
@@ -23,10 +23,11 @@ Technical reference for Qwen3.5-27B and the abliterated variant used by Gizmo-AI
 - Mathematical and logical reasoning
 - Instruction following and conversation
 - Image understanding (with mmproj vision projector)
+- Tool calling (web search, memory, etc.)
 
 ## Abliteration
 
-The model used by Gizmo-AI is `huihui-ai/Huihui-Qwen3.5-27B-abliterated`.
+The model used by Gizmo-AI is `huihui-ai/Huihui-Qwen3.5-9B-abliterated`.
 
 **What abliteration does:** Standard models are fine-tuned with RLHF to refuse certain requests. The model learns a "refusal direction" in its residual stream — a specific vector in the model's internal representation space that, when activated, causes it to output refusals. Abliteration identifies this direction and removes it by editing the model weights directly.
 
@@ -38,26 +39,23 @@ The model used by Gizmo-AI is `huihui-ai/Huihui-Qwen3.5-27B-abliterated`.
 - Some responses may lack nuance that the refusal training provided
 - You are responsible for your use of an unconstrained model
 
-**Source:** [huihui-ai/Huihui-Qwen3.5-27B-abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3.5-27B-abliterated) on HuggingFace
+**Source:** [huihui-ai/Huihui-Qwen3.5-9B-abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3.5-9B-abliterated) on HuggingFace
 
 ## GGUF Quantization Reference
 
-All quantizations from [mradermacher/Huihui-Qwen3.5-27B-abliterated-i1-GGUF](https://huggingface.co/mradermacher/Huihui-Qwen3.5-27B-abliterated-i1-GGUF).
-
-The `i1-` prefix means **imatrix quantization** — a technique that analyzes real text data during the quantization process to allocate more precision to the weights that matter most. Always prefer imatrix variants when available.
+All quantizations from [mradermacher/Huihui-Qwen3.5-9B-abliterated-GGUF](https://huggingface.co/mradermacher/Huihui-Qwen3.5-9B-abliterated-GGUF) (static quants).
 
 | Quant | File Size | VRAM Needed | Quality | Notes |
 |-------|-----------|-------------|---------|-------|
-| Q2_K | ~10GB | ~12GB | Poor | Avoid — significant quality loss |
-| IQ3_M | ~12GB | ~14GB | Below average | Only for very constrained VRAM |
-| Q3_K_M | ~13GB | ~15GB | Usable | Minimum for acceptable quality |
-| Q4_K_M | ~16GB | ~18GB | Good | Good balance for 20GB GPUs |
-| **Q5_K_M** | **~19GB** | **~21GB** | **Very good** | **Recommended — used by Gizmo** |
-| Q6_K | ~22GB | ~24GB | Near-lossless | Tight fit on 24GB GPU |
-| Q8_0 | ~29GB | ~31GB | Lossless | Exceeds 24GB VRAM |
-| FP16 | ~54GB | ~56GB | Full precision | Requires 2x 24GB GPUs |
+| Q2_K | ~3.5GB | ~5GB | Poor | Avoid — significant quality loss |
+| Q3_K_M | ~4.5GB | ~6GB | Usable | Minimum for acceptable quality |
+| Q4_K_M | ~5.5GB | ~7GB | Good | Good balance for constrained VRAM |
+| Q5_K_M | ~6.5GB | ~8GB | Very good | Strong quality/size tradeoff |
+| Q6_K | ~7.5GB | ~9GB | Near-lossless | Excellent quality |
+| **Q8_0** | **~9.5GB** | **~12GB** | **Lossless** | **Used by Gizmo — best quality** |
+| FP16 | ~18GB | ~20GB | Full precision | Requires 20GB+ VRAM |
 
-**How to choose:** Pick the largest quant that fits in your VRAM with ~2-3GB headroom for the KV cache and OS overhead.
+**How to choose:** Pick the largest quant that fits in your VRAM with ~2-3GB headroom for the KV cache and OS overhead. With Qwen3-TTS also loaded (~4GB), the 9B Q8_0 uses ~16.8GB total on a 24GB card.
 
 ## Thinking Mode Details
 
@@ -78,8 +76,9 @@ The answer is 4.<|im_end|>
 ```
 
 ### How Gizmo Controls It
-- **Thinking ON:** Inject `<think>\n` as the start of the assistant turn
-- **Thinking OFF:** Inject `\n</think>\n\n` to immediately close the think block
+- llama.cpp native `enable_thinking` API parameter
+- Streaming deltas use `reasoning_content` field for thinking, `content` for response
+- Model always thinks — parameter controls whether reasoning appears in a separate field
 
 ### When Thinking Helps
 - **Complex reasoning:** Math proofs, logic puzzles, strategic analysis
@@ -92,3 +91,38 @@ The answer is 4.<|im_end|>
 - **Creative writing:** Thinking can over-constrain creative output
 - **Casual conversation:** Adds latency without improving quality
 - **Translation:** Direct language mapping doesn't benefit from chain-of-thought
+
+---
+
+## Qwen3-TTS — Text-to-Speech Model
+
+| Property | Value |
+|----------|-------|
+| **Developer** | Alibaba Cloud / Qwen Team |
+| **Model** | Qwen3-TTS-12Hz-1.7B-Base |
+| **Parameters** | 1.7 billion |
+| **Architecture** | Neural codec language model |
+| **Sample Rate** | 24,000 Hz output |
+| **Codec Rate** | 12 Hz (tokens per second of audio) |
+| **Languages** | Multilingual (Chinese, English, Japanese, Korean, etc.) |
+| **Voice Cloning** | Yes — from short reference audio |
+| **VRAM** | ~4GB (bfloat16) |
+
+### How It Works
+Qwen3-TTS is a voice cloning model. It takes a text prompt and a reference audio sample, then generates speech that matches the voice characteristics of the reference. The Base variant does not have a built-in default voice — it always requires reference audio.
+
+### Gizmo Integration
+- Runs as a separate GPU-accelerated container (`gizmo-tts`)
+- Loads on startup, auto-unloads from VRAM after 60 seconds idle
+- Reloads automatically on next TTS request
+- Bundles a default reference voice (espeak-ng generated) for out-of-box use
+- Accepts custom voice references via base64-encoded WAV in API requests
+- OpenAI-compatible endpoint at `/v1/audio/speech`
+
+### Python Package
+```
+pip install qwen-tts>=0.1.1
+```
+Requires `transformers==4.57.3` (exact pin).
+
+**Source:** [Qwen/Qwen3-TTS-12Hz-1.7B-Base](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base) on HuggingFace

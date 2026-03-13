@@ -18,15 +18,15 @@ Full technical reference for Gizmo-AI. Assumes familiarity with containers and R
 │  │  │ gizmo-ui │───▶│ gizmo-       │───▶│ gizmo-llama   │  │   │
 │  │  │ :3100    │    │ orchestrator │    │ :8080         │  │   │
 │  │  │ SvelteKit│    │ :9100 FastAPI│    │ llama.cpp     │  │   │
-│  │  │ nginx    │    └──────┬───────┘    │ Q5_K_M 27B   │  │   │
+│  │  │ nginx    │    └──────┬───────┘    │ Q8_0 9B      │  │   │
 │  │  └──────────┘           │            │ [GPU]         │  │   │
 │  │              ┌──────────┼────────┐   └───────────────┘  │   │
 │  │              │          │        │                       │   │
 │  │   ┌──────────▼──┐  ┌───▼─────┐  ┌▼──────────┐          │   │
 │  │   │gizmo-whisper│  │gizmo-   │  │gizmo-     │          │   │
-│  │   │:8200 (8000) │  │searxng  │  │kokoro     │          │   │
-│  │   │Whisper STT  │  │:8300    │  │:8400(8880)│          │   │
-│  │   │[CPU]        │  │(8080)   │  │TTS [CPU]  │          │   │
+│  │   │:8200 (8000) │  │searxng  │  │qwen3-tts  │          │   │
+│  │   │Whisper STT  │  │:8300    │  │:8400      │          │   │
+│  │   │[CPU]        │  │(8080)   │  │TTS [GPU]  │          │   │
 │  │   └─────────────┘  └─────────┘  └───────────┘          │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                 │
@@ -46,7 +46,7 @@ Full technical reference for Gizmo-AI. Assumes familiarity with containers and R
 | gizmo-ui | gizmo-ui:latest (built) | Web UI (SvelteKit + nginx) | 3100 | 3100 | No | gizmo-orchestrator |
 | gizmo-whisper | fedirz/faster-whisper-server:latest-cpu | Speech-to-text | 8000 | 8200 | No | — |
 | gizmo-searxng | searxng/searxng:latest | Web search engine | 8080 | 8300 | No | — |
-| gizmo-kokoro | ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2 | Text-to-speech | 8880 | 8400 | No | — |
+| gizmo-tts | gizmo-tts:latest (built) | Text-to-speech (Qwen3-TTS) | 8400 | 8400 | Yes (RTX 4090) | — |
 
 **Volumes:**
 - `./models:/models:ro` — Model files (llama container)
@@ -94,7 +94,7 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
 | `tool_call` | `tool`, `status` | Tool execution started |
 | `tool_result` | `tool`, `result` | Tool execution result |
 | `image` | `url` | Image data URL |
-| `audio` | `url` | Audio data URL (base64 MP3) |
+| `audio` | `url` | Audio data URL (base64 WAV) |
 | `done` | `trace_id`, `conversation_id` | Generation complete |
 | `error` | `error`, `trace_id` | Error occurred |
 
@@ -111,7 +111,7 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
 
 ## Thinking Mode Implementation
 
-Qwen3.5-27B is a hybrid thinking model — it always performs chain-of-thought reasoning internally. The orchestrator controls how this reasoning is exposed using llama.cpp's native `enable_thinking` API.
+Qwen3.5-9B is a hybrid thinking model — it always performs chain-of-thought reasoning internally. The orchestrator controls how this reasoning is exposed using llama.cpp's native `enable_thinking` API.
 
 ```python
 payload = {
@@ -179,15 +179,15 @@ Plain text system prompt. Lines starting with `#` are stripped as comments. Defi
 
 ### models.yaml
 ```yaml
-default_model: huihui-qwen35-27b
+default_model: huihui-qwen35-9b
 models:
-  huihui-qwen35-27b:
-    name: "Huihui-Qwen3.5-27B Abliterated"
-    file: "Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf"
+  huihui-qwen35-9b:
+    name: "Huihui-Qwen3.5-9B Abliterated"
+    file: "Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf"
     architecture: qwen3_5
-    parameters: 27B
-    quantization: Q5_K_M
-    context_limit: 16384
+    parameters: 9B
+    quantization: Q8_0
+    context_limit: 32768
     thinking_capable: true
     vision_capable: true
     gpu_layers: 99
@@ -219,7 +219,7 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   ├── router.py                      # Route placeholder (v2)
 │   │   ├── memory.py                      # File-based memory system
 │   │   ├── search.py                      # SearXNG proxy
-│   │   ├── tts.py                         # Kokoro TTS proxy
+│   │   ├── tts.py                         # Qwen3-TTS proxy
 │   │   └── tools.py                       # Tool definitions and dispatch
 │   ├── ui/
 │   │   ├── Dockerfile                     # Node build → nginx serve
@@ -238,6 +238,11 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │           ├── stores/connection.ts   # WebSocket state
 │   │           ├── ws/client.ts           # WebSocket manager
 │   │           └── components/            # UI components
+│   ├── tts/
+│   │   ├── Dockerfile                     # Qwen3-TTS container (PyTorch + CUDA)
+│   │   ├── requirements.txt               # qwen-tts, fastapi, uvicorn
+│   │   ├── main.py                        # TTS server with voice cloning
+│   │   └── assets/default_voice.wav       # Default reference voice
 │   └── searxng/
 │       └── config/settings.yml            # SearXNG configuration
 ├── scripts/

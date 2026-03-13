@@ -72,12 +72,9 @@ The Whisper model used is `Systran/faster-whisper-large-v3` — high accuracy ac
 
 Toggle TTS with the **TTS button** in the header or in Settings.
 
-When enabled, Gizmo will speak responses aloud. An audio player appears in the chat message. The TTS engine is Kokoro — it runs on CPU so it doesn't compete with the model for GPU VRAM.
+When enabled, Gizmo will speak responses aloud. An audio player appears in the chat message. The TTS engine is Qwen3-TTS — a GPU-accelerated neural voice cloning model. It loads into VRAM on demand and auto-unloads after 60 seconds of idle time to free memory for the LLM.
 
-Voice options (configurable in Settings):
-- **Heart** (default) — warm, natural
-- **Bella**, **Nicole** — alternative female voices
-- **Adam**, **Michael** — male voices
+The default voice is generated from a bundled reference audio file. Custom voice cloning is supported via the API by providing a reference WAV sample.
 
 ## Memory
 
@@ -116,6 +113,6 @@ Access via the **Settings** button at the bottom of the sidebar.
 |---------|-------------|
 | **Thinking Mode** | Toggle extended reasoning ON/OFF |
 | **Text-to-Speech** | Toggle spoken responses ON/OFF |
-| **TTS Voice** | Select Kokoro voice (when TTS is on) |
+| **TTS Voice** | Default voice (Qwen3-TTS voice cloning) |
 | **Context Length** | Slider: 2,048–16,384 tokens. Higher = more history visible to model, but slower |
 | **Service Health** | Live status of all 6 backend services |
