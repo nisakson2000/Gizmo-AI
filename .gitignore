@@ -1,0 +1,36 @@
+# Model files — never commit these
+models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
+
+# Runtime data
+memory/
+logs/
+*.log
+*.jsonl
+
+# Environment and secrets
+.env
+*.env
+config/secrets.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node
+node_modules/
+.svelte-kit/
+build/
+
+# System
+.DS_Store
+*.swp
+
+# Tasks (local only)
+tasks/

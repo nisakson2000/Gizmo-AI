@@ -1,0 +1,135 @@
+version: "3.8"
+
+networks:
+  gizmo-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.90.0.0/24
+
+services:
+
+  gizmo-llama:
+    image: gizmo-llama:latest
+    container_name: gizmo-llama
+    networks:
+      - gizmo-net
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models:ro,Z
+    devices:
+      - nvidia.com/gpu=all
+    security_opt:
+      - label=disable
+    command: >
+      --model /models/Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf
+      --host 0.0.0.0
+      --port 8080
+      --ctx-size 16384
+      --n-gpu-layers 99
+      --flash-attn on
+      --threads 8
+      --parallel 4
+      --cont-batching
+      --log-disable
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  gizmo-whisper:
+    image: docker.io/fedirz/faster-whisper-server:latest-cpu
+    container_name: gizmo-whisper
+    networks:
+      - gizmo-net
+    ports:
+      - "8200:8000"
+    environment:
+      - WHISPER__MODEL=Systran/faster-whisper-large-v3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  gizmo-searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: gizmo-searxng
+    networks:
+      - gizmo-net
+    ports:
+      - "8300:8080"
+    volumes:
+      - ./services/searxng/config:/etc/searxng:rw,Z
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8300
+    restart: unless-stopped
+
+  gizmo-kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2
+    container_name: gizmo-kokoro
+    networks:
+      - gizmo-net
+    ports:
+      - "8400:8880"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8880/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  gizmo-orchestrator:
+    build:
+      context: ./services/orchestrator
+      dockerfile: Dockerfile
+    image: gizmo-orchestrator:latest
+    container_name: gizmo-orchestrator
+    networks:
+      - gizmo-net
+    ports:
+      - "9100:9100"
+    volumes:
+      - ./config:/app/config:ro,Z
+      - ./memory:/app/memory:rw,Z
+      - ./logs:/app/logs:rw,Z
+    environment:
+      - LLAMA_HOST=gizmo-llama
+      - LLAMA_PORT=8080
+      - WHISPER_HOST=gizmo-whisper
+      - WHISPER_PORT=8000
+      - SEARXNG_HOST=gizmo-searxng
+      - SEARXNG_PORT=8080
+      - KOKORO_HOST=gizmo-kokoro
+      - KOKORO_PORT=8880
+    depends_on:
+      - gizmo-llama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  gizmo-ui:
+    build:
+      context: ./services/ui
+      dockerfile: Dockerfile
+    image: gizmo-ui:latest
+    container_name: gizmo-ui
+    networks:
+      - gizmo-net
+    ports:
+      - "3100:3100"
+    environment:
+      - ORCHESTRATOR_URL=http://gizmo-orchestrator:9100
+    depends_on:
+      - gizmo-orchestrator
+    restart: unless-stopped

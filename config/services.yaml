@@ -1,0 +1,54 @@
+services:
+  llama:
+    container: gizmo-llama
+    host: gizmo-llama
+    port: 8080
+    host_port: 8080
+    gpu: true
+    health: /health
+    description: "llama.cpp model inference server"
+
+  orchestrator:
+    container: gizmo-orchestrator
+    host: gizmo-orchestrator
+    port: 9100
+    host_port: 9100
+    gpu: false
+    health: /health
+    description: "FastAPI orchestrator — routing, streaming, tools"
+
+  ui:
+    container: gizmo-ui
+    host: gizmo-ui
+    port: 3100
+    host_port: 3100
+    gpu: false
+    health: /
+    description: "SvelteKit web UI served via nginx"
+
+  whisper:
+    container: gizmo-whisper
+    host: gizmo-whisper
+    port: 8000
+    host_port: 8200
+    gpu: false
+    health: /health
+    description: "faster-whisper-server — speech-to-text"
+
+  searxng:
+    container: gizmo-searxng
+    host: gizmo-searxng
+    port: 8080
+    host_port: 8300
+    gpu: false
+    health: /
+    description: "SearXNG — self-hosted web search"
+
+  kokoro:
+    container: gizmo-kokoro
+    host: gizmo-kokoro
+    port: 8880
+    host_port: 8400
+    gpu: false
+    health: /health
+    description: "Kokoro FastAPI — text-to-speech"

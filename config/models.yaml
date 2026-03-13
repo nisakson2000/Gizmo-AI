@@ -1,0 +1,16 @@
+default_model: huihui-qwen35-27b
+
+models:
+  huihui-qwen35-27b:
+    name: "Huihui-Qwen3.5-27B Abliterated"
+    file: "Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf"
+    mmproj: "mmproj/Huihui-Qwen3.5-27B-abliterated.mmproj-Q8_0.gguf"
+    architecture: qwen3_5
+    parameters: 27B
+    quantization: Q5_K_M
+    context_window: 262144
+    context_limit: 16384  # v1 cap for performance
+    thinking_capable: true
+    vision_capable: true
+    gpu_layers: 99  # all layers on GPU
+    vram_required_gb: 21
