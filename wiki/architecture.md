@@ -92,7 +92,6 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
 | `token` | `content` | Response token (streamed incrementally) |
 | `tool_call` | `tool`, `status` | Tool execution started |
 | `tool_result` | `tool`, `result` | Tool execution result |
-| `image` | `url` | Image data URL |
 | `audio` | `url` | Audio data URL (base64 WAV) |
 | `done` | `trace_id`, `conversation_id` | Generation complete |
 | `error` | `error`, `trace_id` | Error occurred |
@@ -107,6 +106,46 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
   "tts": false
 }
 ```
+
+## REST API
+
+The orchestrator also exposes a non-streaming REST endpoint for programmatic access.
+
+### `POST /api/chat`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `message` | Form string | `""` | User message text |
+| `thinking` | Form bool | `false` | Enable thinking mode |
+| `conversation_id` | Form string | `""` | Conversation ID (auto-generated if empty) |
+
+**Response:**
+```json
+{
+  "response": "assistant response text",
+  "thinking": "reasoning content (if thinking enabled)",
+  "conversation_id": "uuid"
+}
+```
+
+Supports up to 5 rounds of automatic tool calling per request. The model can chain tool calls (e.g., search the web, then use the results to answer).
+
+### Other REST Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Orchestrator health check |
+| `/api/services/health` | GET | Health of all 6 backend services |
+| `/api/conversations` | GET | List all conversations |
+| `/api/conversations/{id}` | GET | Get conversation messages |
+| `/api/conversations/{id}` | DELETE | Delete a conversation |
+| `/api/upload` | POST | Upload document (PDF, text, code) |
+| `/api/upload-image` | POST | Upload image (returns base64 data URL) |
+| `/api/transcribe` | POST | Transcribe audio via Whisper |
+| `/api/tts` | POST | Synthesize speech (JSON body: `text`, `voice`) |
+| `/api/search` | GET | Web search via SearXNG (`?q=query`) |
+| `/api/memory/list` | GET | List memory files |
+| `/api/memory/write` | POST | Write memory file |
 
 ## Thinking Mode Implementation
 
@@ -183,13 +222,16 @@ models:
   huihui-qwen35-9b:
     name: "Huihui-Qwen3.5-9B Abliterated"
     file: "Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf"
+    mmproj: "mmproj/Huihui-Qwen3.5-9B-abliterated.mmproj-Q8_0.gguf"
     architecture: qwen3_5
     parameters: 9B
     quantization: Q8_0
+    context_window: 262144
     context_limit: 32768
     thinking_capable: true
     vision_capable: true
     gpu_layers: 99
+    vram_required_gb: 12
 ```
 
 ### services.yaml

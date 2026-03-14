@@ -19,13 +19,18 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 
 ## Features
 
-- **Streaming chat** with persistent conversation history
-- **Toggleable thinking mode** — model reasons step-by-step before responding
+- **Streaming chat** with persistent conversation history and sidebar management (search, load, delete)
+- **Toggleable thinking mode** — model reasons step-by-step in collapsible blocks before responding
+- **Function calling** — model autonomously uses tools (web search, memory read/write) based on context
 - **Web search** via self-hosted SearXNG — no API keys needed
-- **Document analysis** — upload PDFs, text, and code files directly in chat
+- **Document upload** — analyze PDFs, text files, and code directly in chat
 - **Voice input** via faster-whisper — local speech-to-text, no cloud transcription
-- **Text-to-speech** via Qwen3-TTS — GPU-accelerated, multilingual, voice cloning capable
-- **Memory system** — Gizmo remembers facts across conversations
+- **Text-to-speech** via Qwen3-TTS — GPU-accelerated neural voice cloning, auto-unloads from VRAM when idle
+- **Memory system** — Gizmo remembers facts across conversations via keyword-matched file storage
+- **Dark-themed UI** — code syntax highlighting, markdown rendering, auto-reconnecting WebSocket
+- **Service health dashboard** — live status monitoring for all backend services
+- **Customizable persona** — editable system prompt (`config/constitution.txt`) defines model identity and behavior
+- **Dual API** — WebSocket for streaming UI, REST endpoint (`/api/chat`) for programmatic access
 - **100% local** — your data never leaves your machine
 - **No content filtering** — abliterated model, no nannying
 

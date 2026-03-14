@@ -55,7 +55,7 @@ done
 echo " ready."
 
 # Start TTS server (also GPU, loads after LLM to avoid contention)
-echo "Starting Qwen3-TTS server (~3GB VRAM)..."
+echo "Starting Qwen3-TTS server (~4GB VRAM)..."
 podman compose up -d gizmo-tts
 sleep 5
 

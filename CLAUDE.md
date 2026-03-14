@@ -90,6 +90,40 @@ Build complete. All 6 services deployed and operational.
 - TTS: Qwen3-TTS (was Kokoro CPU)
 - VRAM: ~16.8GB peak / 24GB available
 
+## Documentation Sync Mandate (MANDATORY)
+
+Every code change, feature addition, or configuration update MUST include corresponding updates to ALL affected documentation before committing. No exceptions.
+
+### Files that must stay in sync with code:
+- **README.md** — Features list, architecture diagram, hardware requirements, quick start steps
+- **wiki/architecture.md** — Container reference table, WebSocket protocol, REST API table, file tree, models.yaml example
+- **wiki/setup.md** — Download steps, verification commands, troubleshooting
+- **wiki/usage.md** — Feature descriptions, settings reference, supported file types
+- **wiki/development.md** — Tool definitions, future features list, contributing guide
+- **wiki/model-reference.md** — Model specs, quantization table, TTS details
+- **wiki/how-ai-works.md** — Educational explanations (update if concepts change)
+- **AUDIT.md** — V2 open issues table (update when issues are fixed or new ones found)
+- **config/models.yaml** — Must match the actual model being served
+- **config/services.yaml** — Must match docker-compose.yml ports and service names
+- **CLAUDE.md** — System facts, architecture, known issues sections
+
+### Checklist for every change:
+1. Does this add/remove/modify a user-facing feature? → Update README.md features list + wiki/usage.md
+2. Does this change architecture (new service, port change, new endpoint)? → Update README.md diagram + wiki/architecture.md container table + REST API table + file tree
+3. Does this change setup steps (new dependency, different download)? → Update wiki/setup.md
+4. Does this add/modify a tool? → Update wiki/architecture.md tool table + tools.py definitions
+5. Does this change model or TTS? → Update wiki/model-reference.md + README.md badges + CLAUDE.md system facts
+6. Does this change docker-compose.yml? → Update wiki/architecture.md container reference + config/services.yaml
+7. Does this change VRAM usage? → Update README.md hardware requirements + CLAUDE.md system facts
+8. Does this fix a known issue from AUDIT.md? → Move it from "Open Issues" to a "Resolved" row
+
+### Never:
+- Add a feature without documenting it in README.md and the relevant wiki page
+- Remove a feature without removing it from all documentation
+- Change a port, endpoint, or config value without updating all references
+- Merge code that makes any documentation inaccurate
+- Claim a feature works when it doesn't (e.g., vision — be honest about "downloaded but not enabled")
+
 ## Future Roadmap
 - Multi-turn tool use (agent loop with iterative tool calls)
 - Conversation search and export

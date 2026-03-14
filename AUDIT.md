@@ -1,4 +1,42 @@
-# Gizmo-AI V1 — Audit Report
+# Gizmo-AI — Audit Report
+
+---
+
+## V2 Status (2026-03-13)
+
+**Build:** Gizmo-AI V2, Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf + Qwen3-TTS-12Hz-1.7B-Base
+
+### Changes from V1
+
+| Change | V1 | V2 |
+|--------|----|----|
+| **LLM** | Qwen3.5-27B Q5_K_M (~22GB VRAM) | Qwen3.5-9B Q8_0 (~12GB VRAM) |
+| **TTS** | Kokoro (CPU, Form-data API) | Qwen3-TTS (GPU, JSON API, voice cloning) |
+| **Peak VRAM** | ~22.1GB (dangerously tight) | ~16.8GB (comfortable on 24GB) |
+| **TTS VRAM** | N/A (CPU) | ~4GB (auto-unloads after 60s idle) |
+
+### V1 Issues Resolved in V2
+
+| V1 Issue | Status |
+|----------|--------|
+| VRAM at 22120 MiB (~92%), OOM risk | **Fixed** — 9B Q8_0 uses ~12GB, TTS adds ~4GB peak = ~16.8GB (70%) |
+| Kokoro TTS used Form data, inconsistent with JSON API | **Fixed** — Qwen3-TTS `/api/tts` accepts JSON |
+| `--parallel 4` compounding VRAM pressure | **Mitigated** — 7.2GB headroom vs 1.9GB in V1 |
+
+### V2 Open Issues
+
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| **Vision not enabled** | Medium | mmproj Q8_0 downloaded but `--mmproj` flag not in docker-compose.yml. Image upload endpoint works but model cannot process images. |
+| **Thinking mode always active at model level** | Low | Model always thinks regardless of `enable_thinking` parameter. The parameter controls whether reasoning appears in a separate field — UI toggle works correctly from user perspective. |
+| **Context length slider not wired** | Low | UI settings slider (2K-32K) exists but is not sent to backend. Model always uses 32,768 configured in docker-compose.yml. |
+| **No stop generation button** | Low | UI shows spinner during generation but no way to cancel mid-stream. |
+| **Nginx DNS cache on restart** | Low | If orchestrator container restarts and gets new IP, nginx may cache stale DNS. Fix: restart gizmo-ui or add `resolver 127.0.0.11 valid=10s;` to nginx config. |
+
+---
+
+## V1 Audit (Historical)
+
 **Date:** 2026-03-13
 **Auditor:** Claude Code
 **Build:** Gizmo-AI v1, Huihui-Qwen3.5-27B-abliterated.i1-Q5_K_M.gguf
