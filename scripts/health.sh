@@ -6,6 +6,7 @@ services=(
     "gizmo-llama:8080:/health"
     "gizmo-orchestrator:9100:/health"
     "gizmo-tts:8400:/health"
+    "gizmo-whisper:8200:/health"
     "gizmo-searxng:8300:/"
     "gizmo-ui:3100:/health"
 )

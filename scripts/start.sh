@@ -38,9 +38,15 @@ if ! podman image exists gizmo-llama:latest; then
     exit 1
 fi
 
+# Check sandbox image exists
+if ! podman image exists gizmo-sandbox:latest; then
+    echo "WARNING: gizmo-sandbox image not found. Code execution will not work."
+    echo "Build it with: podman build -t gizmo-sandbox:latest services/sandbox/"
+fi
+
 # Start CPU-only infrastructure first
 echo "Starting infrastructure services..."
-podman compose up -d gizmo-searxng
+podman compose up -d gizmo-searxng gizmo-whisper
 sleep 5
 
 # Start model server (GPU)
@@ -71,6 +77,7 @@ echo "║  UI:           http://localhost:3100                  ║"
 echo "║  Orchestrator: http://localhost:9100                  ║"
 echo "║  LLM API:      http://localhost:8080                  ║"
 echo "║  TTS API:      http://localhost:8400                  ║"
+echo "║  Whisper API:  http://localhost:8200                  ║"
 echo "╚═══════════════════════════════════════════════════════╝"
 echo ""
 echo "Tailscale: access via your Tailscale IP on port 3100"
