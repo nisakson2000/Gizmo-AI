@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -11,6 +12,7 @@ import tempfile
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -57,6 +59,34 @@ DB_PATH = Path("/app/memory/conversations.db")
 LOGS_DIR = Path("/app/logs")
 VOICES_DIR = Path("/app/voices")
 MEDIA_DIR = Path("/app/media")
+
+
+# --- Logging ---
+
+
+def setup_logging():
+    """Configure error and conversation loggers with rotating file handlers."""
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+    # Error logger — captures exceptions, tool failures, timeouts
+    err = logging.getLogger("gizmo.error")
+    err.setLevel(logging.WARNING)
+    err_handler = RotatingFileHandler(LOGS_DIR / "error.log", maxBytes=5_000_000, backupCount=3)
+    err_handler.setFormatter(fmt)
+    err.addHandler(err_handler)
+
+    # Conversation logger — records user/assistant messages, tool calls
+    conv = logging.getLogger("gizmo.conversations")
+    conv.setLevel(logging.INFO)
+    conv_handler = RotatingFileHandler(LOGS_DIR / "conversations.log", maxBytes=10_000_000, backupCount=3)
+    conv_handler.setFormatter(fmt)
+    conv.addHandler(conv_handler)
+
+
+setup_logging()
+error_log = logging.getLogger("gizmo.error")
+conv_log = logging.getLogger("gizmo.conversations")
 
 
 # --- Database ---
@@ -363,6 +393,7 @@ async def ws_chat(ws: WebSocket):
             trace_id = f"gizmo-{uuid.uuid4().hex[:8]}"
 
             await ws.send_json({"type": "trace_id", "trace_id": trace_id})
+            conv_log.info("[%s] USER (%s): %s", trace_id, conversation_id, user_text[:500])
 
             # Load conversation history
             history = get_conversation_messages(conversation_id)
@@ -411,6 +442,7 @@ async def ws_chat(ws: WebSocket):
                         "status": "running",
                     })
                 elif event["type"] == "error":
+                    error_log.error("[%s] Stream error: %s", trace_id, event["error"])
                     await ws.send_json({
                         "type": "error",
                         "error": event["error"],
@@ -435,12 +467,15 @@ async def ws_chat(ws: WebSocket):
                 })
 
                 for tc in tool_calls_pending:
+                    conv_log.info("[%s] TOOL_CALL: %s(%s)", trace_id, tc["name"], tc["arguments"][:200])
                     try:
                         args = json.loads(tc["arguments"]) if isinstance(tc["arguments"], str) else tc["arguments"]
                         result = await execute_tool(tc["name"], args)
                     except Exception as e:
                         result = f"Tool error: {str(e)}"
+                        error_log.error("[%s] Tool '%s' failed: %s", trace_id, tc["name"], e, exc_info=True)
 
+                    conv_log.info("[%s] TOOL_RESULT: %s → %s", trace_id, tc["name"], result[:300])
                     await ws.send_json({
                         "type": "tool_result",
                         "tool": tc["name"],
@@ -477,6 +512,7 @@ async def ws_chat(ws: WebSocket):
 
             # Save assistant response
             save_message(conversation_id, "assistant", full_response, full_thinking)
+            conv_log.info("[%s] ASSISTANT (%s): %s", trace_id, conversation_id, full_response[:500])
 
             await ws.send_json({
                 "type": "done",
@@ -486,6 +522,8 @@ async def ws_chat(ws: WebSocket):
 
     except WebSocketDisconnect:
         pass
+    except Exception as e:
+        error_log.error("WebSocket handler error: %s", e, exc_info=True)
 
 
 # --- REST Chat ---
@@ -500,6 +538,8 @@ async def rest_chat(
     """Non-streaming chat endpoint."""
     if not conversation_id:
         conversation_id = str(uuid.uuid4())
+
+    conv_log.info("[REST] USER (%s): %s", conversation_id, message[:500])
 
     history = get_conversation_messages(conversation_id)
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]
@@ -544,11 +584,13 @@ async def rest_chat(
         full_response = ""
 
         for tc in tool_calls_pending:
+            conv_log.info("[REST] TOOL_CALL: %s(%s)", tc["name"], tc["arguments"][:200])
             try:
                 args = json.loads(tc["arguments"]) if isinstance(tc["arguments"], str) else tc["arguments"]
                 result = await execute_tool(tc["name"], args)
             except Exception as e:
                 result = f"Tool error: {e}"
+                error_log.error("[REST] Tool '%s' failed: %s", tc["name"], e, exc_info=True)
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
@@ -556,6 +598,7 @@ async def rest_chat(
             })
 
     save_message(conversation_id, "assistant", full_response, full_thinking)
+    conv_log.info("[REST] ASSISTANT (%s): %s", conversation_id, full_response[:500])
 
     return {
         "response": full_response,
@@ -581,6 +624,7 @@ async def upload_file(file: UploadFile = File(...)):
             text = "\n".join(page.extract_text() or "" for page in reader.pages)
             return {"filename": filename, "type": "pdf", "content": text[:10000]}
         except Exception as e:
+            error_log.error("PDF parse error for '%s': %s", filename, e, exc_info=True)
             return JSONResponse(status_code=400, content={"error": f"PDF parse error: {e}"})
     else:
         try:
@@ -789,8 +833,28 @@ async def api_run_code(request: Request):
     if not code.strip():
         return JSONResponse(status_code=400, content={"error": "No code provided"})
     timeout = min(max(int(body.get("timeout", 10)), 1), 30)
-    result = await sandbox_run(code, timeout)
+    try:
+        result = await sandbox_run(code, timeout)
+    except Exception as e:
+        error_log.error("Sandbox execution error: %s", e, exc_info=True)
+        return JSONResponse(status_code=500, content={"error": f"Sandbox error: {e}"})
     return result
+
+
+# --- Logs ---
+
+
+@app.get("/api/logs/{log_name}")
+async def get_logs(log_name: str, lines: int = 100):
+    """Read the last N lines from a log file."""
+    allowed = {"error": "error.log", "conversations": "conversations.log"}
+    if log_name not in allowed:
+        return JSONResponse(status_code=400, content={"error": f"Unknown log. Use: {', '.join(allowed)}"})
+    log_path = LOGS_DIR / allowed[log_name]
+    if not log_path.exists():
+        return {"log": log_name, "lines": []}
+    all_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return {"log": log_name, "lines": all_lines[-lines:]}
 
 
 # --- TTS ---
@@ -928,6 +992,8 @@ async def transcribe(file: UploadFile = File(...)):
             resp.raise_for_status()
             return resp.json()
     except httpx.ConnectError:
+        error_log.warning("Whisper service unavailable")
         return JSONResponse(status_code=503, content={"error": "Whisper service unavailable"})
     except Exception as e:
+        error_log.error("Transcription error: %s", e, exc_info=True)
         return JSONResponse(status_code=500, content={"error": str(e)})
