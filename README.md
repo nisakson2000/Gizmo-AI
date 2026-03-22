@@ -37,7 +37,7 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Code Playground** — dedicated modal for writing and running Python directly, or sending code to Gizmo for analysis
 - **Dark-themed UI** — code syntax highlighting, markdown rendering, auto-reconnecting WebSocket
 - **Service health dashboard** — live status monitoring for all backend services
-- **Customizable persona** — split constitution system with functionality and behavior rules, plus a pattern library
+- **Customizable persona** — single constitution file (`config/constitution.txt`) defines identity, capabilities, and behavior rules
 - **Vision-aware prompting** — detailed vision analysis instructions injected only when images/video are present
 - **TTS voice selection** — choose a cloned voice from the Voice Studio for chat TTS responses
 - **Per-token timeout** — 60-second inactivity detection prevents model hangs during generation
