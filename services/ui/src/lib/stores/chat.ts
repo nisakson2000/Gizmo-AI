@@ -58,6 +58,14 @@ export const pendingVariants = writable<MessageVariant[]>([]);
 export const pendingPromptIndex = writable<number>(0);
 export const pendingTtsInfo = writable<string>('');
 
+// Derived: ID of the last assistant message (avoids O(N) scan per ChatMessage)
+export const lastAssistantId = derived(messages, ($msgs) => {
+	for (let i = $msgs.length - 1; i >= 0; i--) {
+		if ($msgs[i].role === 'assistant') return $msgs[i].id;
+	}
+	return null;
+});
+
 export function newConversation() {
 	activeConversationId.set(null);
 	messages.set([]);
@@ -155,6 +163,9 @@ export async function loadConversation(id: string) {
 					thinking: m.thinking || '',
 					timestamp: m.timestamp,
 					audioUrl: m.audio_url || undefined,
+					imageUrl: m.image_url || undefined,
+					videoUrl: m.video_url || undefined,
+					toolCalls: m.tool_calls ? JSON.parse(m.tool_calls) : undefined,
 				}))
 			);
 		}

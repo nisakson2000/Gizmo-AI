@@ -4,7 +4,7 @@
 	import { highlightCode } from '$lib/actions/highlight';
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallBlock from './ToolCallBlock.svelte';
-	import { messages, generating, truncateMessagesFrom, addUserMessage, pendingVariants, pendingPromptIndex, setVariantIndex } from '$lib/stores/chat';
+	import { messages, generating, truncateMessagesFrom, addUserMessage, pendingVariants, pendingPromptIndex, setVariantIndex, lastAssistantId } from '$lib/stores/chat';
 	import { send } from '$lib/ws/client';
 	import { get } from 'svelte/store';
 	import { toast } from '$lib/stores/toast';
@@ -16,13 +16,7 @@
 
 	marked.setOptions({ breaks: true, gfm: true });
 
-	let isLastAssistant = $derived.by(() => {
-		const msgs = get(messages);
-		for (let i = msgs.length - 1; i >= 0; i--) {
-			if (msgs[i].role === 'assistant') return msgs[i].id === message.id;
-		}
-		return false;
-	});
+	let isLastAssistant = $derived($lastAssistantId === message.id);
 
 	// Variant-aware display: use variant data if available
 	let activeVariant = $derived.by((): MessageVariant | null => {
@@ -87,7 +81,7 @@
 		const ok = await truncateMessagesFrom(idx);
 		if (!ok) { pendingVariants.set([]); return; }
 		messages.update((m) => m.slice(0, idx));
-		send(userMsg.content, userMsg.imageUrl, userMsg.videoFrames, { regenerate: true });
+		send(userMsg.content, userMsg.imageUrl, userMsg.videoFrames, userMsg.videoUrl, { regenerate: true });
 	}
 
 	function startEdit() {
@@ -148,7 +142,7 @@
 		messages.update((m) => m.slice(0, idx));
 		// Preserve original media attachments, pass user variants
 		addUserMessage(text, message.imageUrl, message.videoFrames, message.videoUrl, userVariants, userVariants.length - 1);
-		send(text, message.imageUrl, message.videoFrames);
+		send(text, message.imageUrl, message.videoFrames, message.videoUrl);
 		editing = false;
 		editText = '';
 	}

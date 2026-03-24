@@ -36,6 +36,119 @@ All V4 code issues were resolved in the previous commit (b313c53). V5 focuses on
 
 ---
 
+## V5 Audit (2026-03-24)
+
+**Auditor:** Claude Code
+**Build:** Gizmo-AI V5, Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf + Qwen3-TTS-12Hz-1.7B-Base + Whisper (faster-whisper-base)
+**Last Commit:** `13ecf89` — docs: update README with grouped features, themes, multi-round tools, VRAM budget
+**Stack Status:** All 6 services healthy (verified via `/api/services/health`)
+**Scope:** Full codebase review — orchestrator (main.py, memory.py, tools.py, sandbox.py, search.py, tts.py), all UI components (.svelte, .ts), nginx config, docker-compose, and all documentation (README, wiki, CLAUDE.md)
+
+### Audit Summary
+
+| Category | Status | Notes |
+|----------|--------|-------|
+| Infrastructure Health | PASS | All 6 services healthy, all healthchecks configured |
+| Orchestrator (main.py) | WARN | 1 critical, 8 warnings. Glob injection in delete_voice, empty message on error, init_db leak |
+| Tool System (tools.py) | PASS | 5 tools, multi-round loop correct with 5-round cap |
+| Memory System (memory.py) | PASS | BM25 retrieval, path traversal protection intact |
+| Sandbox (sandbox.py) | PASS | Resource limits enforced, container cleanup in finally |
+| Search (search.py) | PASS | SearXNG proxy with error handling |
+| TTS (tts.py) | PASS | Voice cloning, health check present |
+| UI Components (.svelte) | WARN | 1 critical reactivity bug, CSS injection, memory leaks, UX hazards |
+| WebSocket Client (client.ts) | WARN | Audio/done race condition, content lost on conversation switch |
+| Chat Store (chat.ts) | WARN | Loaded conversations lose variant/media state |
+| Nginx (nginx.conf) | PASS | Minor: health Content-Type not applied |
+| Docker Compose | PASS | All healthchecks present, KV cache quantization added |
+| CLAUDE.md Accuracy | WARN | Tailscale hostname exposed, roadmap stale, session log outdated |
+| Wiki / README | WARN | Missing endpoints, stale VRAM numbers |
+| GitHub Repo | WARN | Tailscale hostname and IP exposed in public repo |
+
+**Overall: 10/15 categories PASS, 5 WARN (includes 2 critical issues)**
+
+### Critical Issues
+
+| # | Issue | Location | Description |
+|---|-------|----------|-------------|
+| 1 | **Tailscale hostname/IP in public repo** | `CLAUDE.md:107`, `AUDIT.md:221` | Real Tailscale hostname `bazzite.tail163501.ts.net` and IP `100.69.89.10` are in committed files in a public GitHub repo. Anyone can see the Tailscale network name. Replace with placeholders. |
+| 2 | **`isLastAssistant` not reactive** | `ChatMessage.svelte:19-25` | Uses `get(messages)` inside `$derived.by()`. `get()` is a one-shot read that does not register a Svelte 5 reactive dependency. The derived value is computed once at mount and never updates. The "Regenerate" button stays visible on stale messages and disappears from the actual last assistant message after new messages arrive. Fix: use `$messages` instead of `get(messages)`. |
+| 3 | **`delete_voice` glob metacharacter injection** | `main.py:1296` | `VOICES_DIR.glob(f"{voice_id}.*")` uses the URL path parameter directly in a glob pattern. A crafted request like `DELETE /api/voices/[a-z]*` would match and delete all voice files matching the pattern. Fix: validate `voice_id` matches `^[a-f0-9]{8}$` before use. |
+
+### Warning Issues — Backend
+
+| # | Issue | Location | Description |
+|---|-------|----------|-------------|
+| 4 | **Stream error saves empty assistant message** | `main.py:697` | If `stream_chat` yields an error before any tokens, `full_response` is `""` but `save_message()` runs unconditionally. An empty assistant message is saved to the DB and will appear as a blank bubble on conversation reload. Guard with `if full_response:`. |
+| 5 | **`init_db()` missing try/finally** | `main.py:105-133` | All other DB functions use try/finally but `init_db()` calls `conn.close()` without protection. If `ALTER TABLE` migration at line 131 raises, the connection leaks. |
+| 6 | **`preview_voice` missing JSON parse guard** | `main.py:1308` | `body = await request.json()` without try/except. Malformed JSON body causes unhandled 500. Every other JSON-reading endpoint has the guard. |
+| 7 | **`save_voice` path traversal via raw filename** | `main.py:~1265` | `os.path.join(tmpdir, file.filename or "voice.wav")` — a filename like `../../etc/cron.d/job` would write outside tmpdir. Fix: use `Path(file.filename).name`. |
+| 8 | **`upload_video` leaks file on error paths** | `main.py:~855-897` | Video is written to `MEDIA_DIR` before probing. If ffprobe fails, duration is invalid, or no frames extracted, the video file remains on disk with no cleanup. Orphaned files accumulate over time. |
+| 9 | **`prune_conversations` log silently discarded** | `main.py:~153` | `error_log.info("Pruned %d old conversations ...")` — but `error_log` level is `WARNING`. This `.info()` call is silently dropped. Use `conv_log.info(...)` instead. |
+| 10 | **`delete_messages_from` false 404** | `main.py:~1082` | Returns 404 "Conversation not found" when a conversation exists but has no messages. Should check `conversations` table directly. |
+| 11 | **`generate_title` can inject WS events into next turn** | `main.py:~709` | `asyncio.create_task(generate_title(..., ws))` fires after `done`. If user sends next message quickly, the title event arrives between tokens of the new turn. Client should handle by conversation_id correlation. |
+
+### Warning Issues — UI
+
+| # | Issue | Location | Description |
+|---|-------|----------|-------------|
+| 12 | **Content lost on conversation switch during generation** | `client.ts:~129-144` | When user switches conversations mid-generation, `finalizeAssistantMessage` is skipped but `streamingContent` is cleared. The partial response is silently discarded — no toast, no DB save. |
+| 13 | **`audio`/`done` event ordering fragile** | `client.ts:~108-118` | `audio` handler finalizes and sets `generating=false`. `done` handler checks `generating` before finalizing. If `done` arrives before `audio` (network reorder), message is finalized without audio, then audio creates a duplicate empty message. |
+| 14 | **`sanitize.ts` allows `style` attribute** | `sanitize.ts:4-7` | `ADD_ATTR: ['class', 'style']` lets assistant responses (or imported conversations) inject arbitrary CSS: fullscreen overlays, IP-leaking `background-image: url()`, invisible text. Remove `'style'` from `ADD_ATTR`. |
+| 15 | **`loadConversation` discards variant/media state** | `chat.ts:~150-159` | Loaded conversations don't restore `variants`, `variantIndex`, `toolCalls`, `ttsInfo`, `imageUrl`, `videoUrl`, or `videoFrames`. After reload: variant arrows gone, edit+resubmit loses image attachments. |
+| 16 | **Sidebar search timer not cleaned up on destroy** | `Sidebar.svelte:~116-124` | `$effect` sets a 500ms debounce timer but doesn't return a cleanup function. Timer fires after sidebar closes. |
+| 17 | **VoiceStudio audioUrl object URL leak** | `VoiceStudio.svelte:~117-118` | When component closes (`{#if open}` → false), the final `audioUrl` object URL is never revoked. Leaks memory. |
+| 18 | **Double getUserMedia on rapid mic clicks** | `ChatInput.svelte:~204-252` | Between `getUserMedia()` (async) and `mediaRecorder.start()`, `recording` is still false. A second click creates a second stream. First stream's tracks are never stopped — browser mic indicator stays on. |
+| 19 | **Ctrl+Shift+N during generation** | `+page.svelte:~42-44` | `newConversation()` fires without checking `generating`. Clears messages mid-stream. `done` event then sets `activeConversationId` back to the old conversation, causing a surprise switch. |
+| 20 | **nginx health Content-Type not applied** | `nginx.conf:64-67` | `add_header` after `return` is ignored by nginx. Health response has `default_type application/octet-stream` instead of `application/json`. Not functionally broken (curl -f checks status only) but incorrect. Fix: use `default_type application/json` before `return`. |
+
+### Warning Issues — Documentation
+
+| # | Issue | Location | Description |
+|---|-------|----------|-------------|
+| 21 | **Missing REST endpoints in wiki** | `wiki/architecture.md` REST table | `POST /api/voices/{id}/preview` and `GET /api/logs/{log_name}` are not listed. |
+| 22 | **CLAUDE.md Future Roadmap stale** | `CLAUDE.md:208-218` | "Multi-turn tool use" and "Conversation search and export" are listed as future but were implemented in V5. |
+| 23 | **V5 session log entry missing** | `CLAUDE.md:219-226` | Session Log ends at V4 (2026-03-14). No V5 entry. |
+| 24 | **AUDIT.md V1 says "model info — Still pending"** | `AUDIT.md:237` | Was fixed in V5. Should be marked done. |
+| 25 | **VRAM documentation may undercount** | `CLAUDE.md:23`, `wiki/setup.md` | States ~16.8GB peak. V5 added `--cache-type-k q8_0 --cache-type-v q8_0` and `--batch-size 4096` which affect VRAM. The Q8_0 KV cache for 32K context adds significant overhead not reflected in the 16.8GB figure. Verify with `nvidia-smi` during active inference. |
+| 26 | **Memory dir layout missing conversations.db** | `wiki/architecture.md:~183-188` | Memory directory description doesn't mention that `conversations.db` lives at `memory/conversations.db`. |
+
+### Suggestions
+
+| # | Issue | Location | Description |
+|---|-------|----------|-------------|
+| 27 | **`marked.setOptions` called in two components** | `ChatArea.svelte:12`, `ChatMessage.svelte:17` | Both set identical options on the global `marked` singleton. If either changes independently, subtle parse differences occur. Call once at app init. |
+| 28 | **`isLastAssistant` is O(N²) per render** | `ChatMessage.svelte:19-25` | Every ChatMessage scans all messages to check if it's the last assistant. Compute `lastAssistantId` once in chat store and pass as prop. |
+| 29 | **CORS wildcard + credentials** | `main.py:421-422` | `allow_origins=["*"]` with `allow_credentials=True`. FastAPI reflects origin correctly, but this is a security misconfiguration if the service is exposed beyond localhost (Tailscale). Consider explicit origin list. |
+| 30 | **`api_clear_memories` duplicates SUBDIRS** | `main.py:~1122` | Hard-codes `["facts", "conversations", "notes"]` instead of importing `SUBDIRS` from memory.py. |
+| 31 | **`highlight.ts` copy listener never removed** | `highlight.ts:~35-40` | `destroy()` is a no-op. Listeners are GC'd naturally when `{@html}` re-renders, but documenting this intent would prevent future maintainer confusion. |
+
+### V5 Open Issues
+
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| **Tailscale hostname/IP in public repo** | Critical | `CLAUDE.md:107` and `AUDIT.md:221` expose real Tailscale details. Replace with placeholders. |
+| **`isLastAssistant` not reactive** | Critical | Regenerate button on wrong messages. Use `$messages` instead of `get(messages)`. |
+| **`delete_voice` glob injection** | Critical | Validate voice_id format before glob. |
+| **Stream error saves empty message** | Medium | Guard `save_message` with `if full_response:`. |
+| **`init_db()` connection leak** | Medium | Wrap in try/finally. |
+| **`preview_voice` JSON guard** | Medium | Add try/except around `request.json()`. |
+| **`save_voice` path traversal** | Medium | Use `Path(filename).name`. |
+| **`upload_video` file leak** | Medium | Delete saved file on error paths. |
+| **`prune_conversations` log discarded** | Medium | Use `conv_log` not `error_log`. |
+| **Content lost on conv switch** | Medium | Show toast or finalize partial message. |
+| **`sanitize.ts` style attribute** | Medium | Remove `'style'` from `ADD_ATTR`. |
+| **`loadConversation` drops state** | Medium | Variant/media features only work within session. |
+| **Double getUserMedia** | Medium | Add `requestingMic` guard flag. |
+| **Ctrl+Shift+N during gen** | Medium | Check `generating` before `newConversation()`. |
+| **Missing wiki endpoints** | Low | Add preview and logs to REST table. |
+| **CLAUDE.md roadmap stale** | Low | Remove implemented items from Future Roadmap. |
+| **V5 session log missing** | Low | Add session log entry. |
+| **VRAM docs may undercount** | Low | Verify with nvidia-smi during inference. |
+| **nginx health Content-Type** | Low | Use `default_type` before `return`. |
+| **Whisper runs on CPU** | Low | Intentional — not a bug. |
+
+---
+
 ## V4 Audit (2026-03-17)
 
 **Auditor:** Claude Code
@@ -218,7 +331,7 @@ All V4 code issues were resolved in the previous commit (b313c53). V5 focuses on
 | 9. Conversation Persistence | PASS | SQLite survives restart. Context recalled correctly across restart boundary. |
 | 10. UI Functionality | PASS* | Page loads, API/WS proxy works. *Manual browser testing required for interactive elements. Known nginx DNS cache issue on container restart. |
 | 11. GitHub Presence | PASS* | Repo public, all files present, profile README updated. *No repository topics set. |
-| 12. Tailscale Remote Access | PASS | UI and orchestrator reachable at http://100.69.89.10:3100. Firewall zone: trusted. |
+| 12. Tailscale Remote Access | PASS | UI and orchestrator reachable via Tailscale IP. Firewall zone: trusted. |
 
 **Overall: 9/12 categories passing (1 WARN, 2 FAIL)**
 
@@ -234,4 +347,4 @@ All V4 code issues were resolved in the previous commit (b313c53). V5 focuses on
 4. **Reduce VRAM pressure:** Lower `--parallel` — **Done in V2 (reduced to 2)**
 5. **Set GitHub topics** — **Done**
 6. **Normalize API format:** Make `/api/tts` accept JSON — **Done in V2**
-7. **Add model info to orchestrator health** — Still pending
+7. **Add model info to orchestrator health** — **Done in V5** (`MODEL_NAME` env var, `/health` returns model name)

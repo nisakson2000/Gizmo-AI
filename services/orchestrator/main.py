@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 
@@ -106,31 +106,39 @@ def init_db():
     """Initialize SQLite database for conversation persistence."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS conversations (
-            id TEXT PRIMARY KEY,
-            title TEXT,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            conversation_id TEXT,
-            role TEXT,
-            content TEXT,
-            thinking TEXT,
-            timestamp TIMESTAMP,
-            FOREIGN KEY (conversation_id) REFERENCES conversations(id)
-        )
-    """)
-    # Add audio_url column if missing (migration for existing DBs)
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
-    if "audio_url" not in cols:
-        conn.execute("ALTER TABLE messages ADD COLUMN audio_url TEXT")
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS conversations (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT,
+                role TEXT,
+                content TEXT,
+                thinking TEXT,
+                timestamp TIMESTAMP,
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+            )
+        """)
+        # Add columns if missing (migrations for existing DBs)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
+        if "audio_url" not in cols:
+            conn.execute("ALTER TABLE messages ADD COLUMN audio_url TEXT")
+        if "image_url" not in cols:
+            conn.execute("ALTER TABLE messages ADD COLUMN image_url TEXT")
+        if "video_url" not in cols:
+            conn.execute("ALTER TABLE messages ADD COLUMN video_url TEXT")
+        if "tool_calls" not in cols:
+            conn.execute("ALTER TABLE messages ADD COLUMN tool_calls TEXT")
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def prune_conversations():
@@ -150,7 +158,7 @@ def prune_conversations():
         conn.execute(f"DELETE FROM conversations WHERE id IN ({placeholders})", ids)
         conn.commit()
         conn.execute("VACUUM")
-        error_log.info("Pruned %d old conversations (max %d)", len(ids), MAX_CONVERSATIONS)
+        conv_log.info("Pruned %d old conversations (max %d)", len(ids), MAX_CONVERSATIONS)
     finally:
         conn.close()
 
@@ -161,7 +169,9 @@ def get_db():
     return conn
 
 
-def save_message(conversation_id: str, role: str, content: str, thinking: str = "", audio_url: str = ""):
+def save_message(conversation_id: str, role: str, content: str, thinking: str = "",
+                  audio_url: str = "", image_url: str = "", video_url: str = "",
+                  tool_calls: list | None = None):
     """Save a message to the database."""
     conn = get_db()
     try:
@@ -185,9 +195,10 @@ def save_message(conversation_id: str, role: str, content: str, thinking: str = 
                 (now, conversation_id),
             )
 
+        tool_calls_json = json.dumps(tool_calls) if tool_calls else None
         conn.execute(
-            "INSERT INTO messages (conversation_id, role, content, thinking, timestamp, audio_url) VALUES (?, ?, ?, ?, ?, ?)",
-            (conversation_id, role, content, thinking, now, audio_url or None),
+            "INSERT INTO messages (conversation_id, role, content, thinking, timestamp, audio_url, image_url, video_url, tool_calls) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (conversation_id, role, content, thinking, now, audio_url or None, image_url or None, video_url or None, tool_calls_json),
         )
         conn.commit()
     finally:
@@ -201,7 +212,7 @@ def get_conversation_messages(conversation_id: str) -> list[dict]:
     conn = get_db()
     try:
         rows = conn.execute(
-            "SELECT role, content, thinking, timestamp, audio_url FROM messages WHERE conversation_id = ? ORDER BY id",
+            "SELECT role, content, thinking, timestamp, audio_url, image_url, video_url, tool_calls FROM messages WHERE conversation_id = ? ORDER BY id",
             (conversation_id,),
         ).fetchall()
         return [dict(r) for r in rows]
@@ -419,7 +430,7 @@ app = FastAPI(title="Gizmo-AI Orchestrator", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -566,8 +577,24 @@ async def ws_chat(ws: WebSocket):
                     history_msgs.append({"role": "user", "content": user_content})
                 else:
                     history_msgs.append({"role": "user", "content": user_text})
-                # Save user message
-                save_message(conversation_id, "user", user_text)
+                # Persist image to media dir if present
+                persisted_image_url = ""
+                if image_data and image_data.startswith("data:"):
+                    try:
+                        header, b64 = image_data.split(",", 1)
+                        mime = header.split(":")[1].split(";")[0]  # e.g. image/png
+                        ext = mime.split("/")[1].replace("jpeg", "jpg")
+                        img_id = uuid.uuid4().hex[:8]
+                        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+                        img_path = MEDIA_DIR / f"{img_id}.{ext}"
+                        img_path.write_bytes(base64.b64decode(b64))
+                        persisted_image_url = f"/api/media/{img_id}.{ext}"
+                    except Exception:
+                        pass  # Non-critical — image just won't persist
+                persisted_video_url = msg.get("video_url", "")
+                # Save user message with media URLs
+                save_message(conversation_id, "user", user_text,
+                             image_url=persisted_image_url, video_url=persisted_video_url)
 
             # Build prompt
             has_vision = bool(image_data or video_frames)
@@ -578,6 +605,7 @@ async def ws_chat(ws: WebSocket):
             # Stream response
             full_response = ""
             full_thinking = ""
+            executed_tool_calls = []  # Accumulate for DB persistence
             tool_calls_pending = []
 
             async for event in stream_chat(messages, thinking_enabled=thinking):
@@ -633,6 +661,7 @@ async def ws_chat(ws: WebSocket):
                         error_log.error("[%s] Tool '%s' failed: %s", trace_id, tc["name"], e, exc_info=True)
 
                     conv_log.info("[%s] TOOL_RESULT: %s → %s", trace_id, tc["name"], result[:300])
+                    executed_tool_calls.append({"tool": tc["name"], "status": "done", "result": result[:800]})
                     await ws.send_json({
                         "type": "tool_result",
                         "tool": tc["name"],
@@ -693,9 +722,12 @@ async def ws_chat(ws: WebSocket):
                         "url": audio_file_url,
                     })
 
-            # Save assistant response
-            save_message(conversation_id, "assistant", full_response, full_thinking, audio_url=audio_file_url)
-            conv_log.info("[%s] ASSISTANT (%s): %s", trace_id, conversation_id, full_response[:500])
+            # Save assistant response (skip if stream errored before any tokens)
+            if full_response:
+                save_message(conversation_id, "assistant", full_response, full_thinking,
+                             audio_url=audio_file_url,
+                             tool_calls=executed_tool_calls if executed_tool_calls else None)
+                conv_log.info("[%s] ASSISTANT (%s): %s", trace_id, conversation_id, full_response[:500])
 
             await ws.send_json({
                 "type": "done",
@@ -866,6 +898,7 @@ async def upload_video(file: UploadFile = File(...)):
         try:
             duration = float(probe.stdout.strip())
         except (ValueError, AttributeError):
+            saved_video_path.unlink(missing_ok=True)
             return JSONResponse(status_code=400, content={"error": "Could not read video duration"})
 
         # Extract frames evenly spaced
@@ -873,6 +906,7 @@ async def upload_video(file: UploadFile = File(...)):
         os.makedirs(frames_dir)
 
         if duration <= 0:
+            saved_video_path.unlink(missing_ok=True)
             return JSONResponse(status_code=400, content={"error": "Invalid video"})
 
         # Calculate timestamps for evenly spaced frames
@@ -894,6 +928,7 @@ async def upload_video(file: UploadFile = File(...)):
                 frame_data_urls.append(f"data:image/jpeg;base64,{b64}")
 
         if not frame_data_urls:
+            saved_video_path.unlink(missing_ok=True)
             return JSONResponse(status_code=400, content={"error": "Could not extract frames"})
 
         return {
@@ -1074,12 +1109,15 @@ async def delete_messages_from(conv_id: str, index: int):
     """Delete all messages at position `index` and after (0-based insertion order)."""
     conn = get_db()
     try:
+        conv = conn.execute("SELECT id FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+        if not conv:
+            return JSONResponse(status_code=404, content={"error": "Conversation not found"})
         rows = conn.execute(
             "SELECT id FROM messages WHERE conversation_id = ? ORDER BY id ASC",
             (conv_id,),
         ).fetchall()
         if not rows:
-            return JSONResponse(status_code=404, content={"error": "Conversation not found"})
+            return {"deleted": 0}
         if index < 0 or index >= len(rows):
             return JSONResponse(status_code=400, content={"error": f"Index {index} out of range (0-{len(rows)-1})"})
         ids_to_delete = [r["id"] for r in rows[index:]]
@@ -1119,7 +1157,8 @@ async def api_write_memory(
 async def api_clear_memories():
     """Delete all memory files across all subdirectories."""
     count = 0
-    for subdir in ["facts", "conversations", "notes"]:
+    from memory import SUBDIRS
+    for subdir in SUBDIRS:
         dir_path = Path("/app/memory") / subdir
         if not dir_path.exists():
             continue
@@ -1262,7 +1301,7 @@ async def save_voice(file: UploadFile = File(...), name: str = Form(...), max_du
 
     # Save original temporarily, then truncate to WAV via ffmpeg
     with tempfile.TemporaryDirectory() as tmpdir:
-        raw_path = os.path.join(tmpdir, file.filename or "voice.wav")
+        raw_path = os.path.join(tmpdir, Path(file.filename or "voice.wav").name)
         with open(raw_path, "wb") as f:
             f.write(content)
 
@@ -1292,7 +1331,9 @@ async def save_voice(file: UploadFile = File(...), name: str = Form(...), max_du
 @app.delete("/api/voices/{voice_id}")
 async def delete_voice(voice_id: str):
     """Delete a saved voice reference."""
-    # Remove audio file (any extension)
+    import re
+    if not re.match(r'^[a-f0-9]{8}$', voice_id):
+        raise HTTPException(status_code=400, detail="Invalid voice ID format")
     for f in VOICES_DIR.glob(f"{voice_id}.*"):
         f.unlink()
     return {"status": "deleted"}
@@ -1305,7 +1346,10 @@ async def preview_voice(voice_id: str, request: Request):
     if not data_url:
         return JSONResponse(status_code=404, content={"error": "Voice not found"})
 
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
     text = body.get("text", "Hello, this is a voice preview.")
 
     audio = await synthesize(text, voice_clone_data_url=data_url)

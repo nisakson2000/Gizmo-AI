@@ -13,6 +13,14 @@
 	let error = $state('');
 	let audioUrl = $state('');
 	let audioEl: HTMLAudioElement;
+
+	// Revoke object URL when component closes to prevent memory leak
+	$effect(() => {
+		if (!open && audioUrl) {
+			URL.revokeObjectURL(audioUrl);
+			audioUrl = '';
+		}
+	});
 	let voices = $state<SavedVoice[]>([]);
 	let selectedVoiceId = $state<string | null>(null);
 	let uploading = $state(false);

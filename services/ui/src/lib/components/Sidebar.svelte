@@ -121,6 +121,7 @@
 			doFullTextSearch();
 			searchTimer = null;
 		}, 500);
+		return () => { if (searchTimer) { clearTimeout(searchTimer); searchTimer = null; } };
 	});
 
 	function startRename(id: string, currentTitle: string) {

@@ -20,7 +20,7 @@ Everything is containerized via Podman.
 - LLM: Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf (~9.5GB VRAM)
 - TTS: Qwen3-TTS-12Hz-1.7B-Base (~4GB VRAM, bfloat16)
 - STT: faster-whisper-base (CPU, no VRAM)
-- Total peak VRAM: ~16.8GB (LLM + TTS loaded)
+- Total peak VRAM: ~20.7GB (LLM with Q8_0 KV cache + TTS loaded)
 - mmproj enabled: --mmproj flag active in docker-compose.yml, vision fully functional
 - Chat template: chat_template.jinja (handles thinking, vision, tool calling)
 - llama.cpp minimum version: b8148 (required for Qwen3.5)
@@ -104,7 +104,7 @@ Everything is containerized via Podman.
 - Q8_0 only available in static repo (not imatrix): mradermacher/Huihui-Qwen3.5-9B-abliterated-GGUF
 - Context window: 32768 tokens configured (native 262144)
 - UI built at image build time — must `podman compose build gizmo-ui` for changes to take effect
-- Tailscale HTTPS: `tailscale serve --https=443 http://127.0.0.1:3100` provides valid cert at https://bazzite.tail163501.ts.net/
+- Tailscale HTTPS: `tailscale serve --https=443 http://127.0.0.1:3100` provides valid cert at `https://<your-tailscale-hostname>/`
 - File upload limits: docs/images 50MB, video 500MB
 - Voice reference audio truncated via ffmpeg to prevent TTS CUDA OOM
 - Whisper container needs security_opt: label=disable for SELinux (HuggingFace cache mount)
@@ -206,8 +206,6 @@ Every code change, feature addition, or configuration update MUST include corres
 - Keeps constitution.txt clean from detailed vision instructions
 
 ## Future Roadmap
-- Multi-turn tool use (agent loop with iterative tool calls)
-- Conversation search and export
 - Image generation (Stable Diffusion integration)
 - RAG pipeline (document ingestion + vector search)
 - Multi-model support (hot-swap between different GGUFs)
@@ -223,3 +221,4 @@ Every code change, feature addition, or configuration update MUST include corres
 - [2026-03-13] V2 upgrade — 27B→9B LLM, Kokoro→Qwen3-TTS, all docs updated
 - [2026-03-14] V3 upgrade — Voice Studio, video/audio analysis, Whisper STT, vision enabled, server-side conversations, Tailscale HTTPS, constitution split, all docs updated
 - [2026-03-14] V4 upgrade — BM25 memory, Memory Manager UI, code execution sandbox, Code Playground, vision prompt injection, per-token timeout, audio suggestion card, TTS voice selection, tool discipline, all docs updated
+- [2026-03-23] V5 upgrade — Toast notifications, keyboard shortcuts, conversation rename/export/search, streaming perf, response history, regenerate/edit, conversation pruning, Nintendo theme system (9 console themes), stack audit (KV cache quantization, constitution rewrite with XML tags, multi-round WS tool loop, tool schema tightening)

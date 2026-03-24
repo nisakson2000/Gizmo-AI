@@ -18,6 +18,7 @@ import { thinkingEnabled, ttsEnabled, ttsVoiceId, contextLength } from '$lib/sto
 let ws: WebSocket | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let reconnectDelay = 1000;
+let audioFinalized = false;
 const MAX_RECONNECT_DELAY = 30000;
 
 function getWsUrl(): string {
@@ -106,12 +107,9 @@ function handleEvent(data: any) {
 			pendingTtsInfo.set(data.message || '');
 			break;
 		case 'audio': {
-			// Finalize with audio if on the right conversation
-			const genId = get(generatingConversationId);
-			const curId = get(activeConversationId);
-			if (genId === curId || curId === null) {
-				finalizeAssistantMessage(get(currentTraceId), data.url);
-			}
+			// Finalize with audio — mark as finalized to prevent double-finalize in done handler
+			audioFinalized = true;
+			finalizeAssistantMessage(get(currentTraceId), data.url);
 			generating.set(false);
 			connectionStatus.set('connected');
 			loadConversations();
@@ -125,17 +123,14 @@ function handleEvent(data: any) {
 					activeConversationId.set(data.conversation_id);
 				}
 			}
-			// Finalize if still generating (audio handler didn't already do it)
-			if (get(generating)) {
-				const genConvId = get(generatingConversationId);
-				const activeId = get(activeConversationId);
-				if (genConvId === activeId) {
-					finalizeAssistantMessage(get(currentTraceId));
-				}
+			// Finalize if still generating and audio handler didn't already do it
+			if (get(generating) && !audioFinalized) {
+				finalizeAssistantMessage(get(currentTraceId));
 				generating.set(false);
 				connectionStatus.set('connected');
 			}
 			// Always cleanup
+			audioFinalized = false;
 			generatingConversationId.set(null);
 			streamingThinking.set('');
 			streamingContent.set('');
@@ -157,12 +152,13 @@ function handleEvent(data: any) {
 	}
 }
 
-export function send(message: string, imageDataUrl?: string, videoFrames?: string[], options?: { regenerate?: boolean }) {
+export function send(message: string, imageDataUrl?: string, videoFrames?: string[], videoUrl?: string, options?: { regenerate?: boolean }) {
 	if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
 	generating.set(true);
 	generatingConversationId.set(get(activeConversationId));
 	connectionStatus.set('generating');
+	audioFinalized = false;
 	streamingThinking.set('');
 	streamingContent.set('');
 	streamingToolCalls.set([]);
@@ -183,6 +179,7 @@ export function send(message: string, imageDataUrl?: string, videoFrames?: strin
 	}
 	if (videoFrames && videoFrames.length > 0) {
 		payload.video_frames = videoFrames;
+		if (videoUrl) payload.video_url = videoUrl;
 	} else if (imageDataUrl) {
 		payload.image = imageDataUrl;
 	}

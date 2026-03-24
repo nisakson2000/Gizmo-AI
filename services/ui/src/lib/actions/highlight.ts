@@ -48,6 +48,8 @@ export function highlightCode(node: HTMLElement, _html: string) {
 		update(_newHtml: string) {
 			process();
 		},
-		destroy() {},
+		destroy() {
+			// Copy button listeners are GC'd when {@html} re-renders and removes the DOM nodes.
+		},
 	};
 }

@@ -9,7 +9,7 @@
 	import MemoryManager from '$lib/components/MemoryManager.svelte';
 	import CodePlayground from '$lib/components/CodePlayground.svelte';
 	import { connect, disconnect } from '$lib/ws/client';
-	import { loadConversations, newConversation } from '$lib/stores/chat';
+	import { loadConversations, newConversation, generating } from '$lib/stores/chat';
 	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, settingsOpen, memoryManagerOpen, codePlaygroundOpen, focusTrigger } from '$lib/stores/settings';
 	import { theme } from '$lib/stores/theme';
 
@@ -41,7 +41,7 @@
 
 		if (mod && e.shiftKey && e.key === 'N') {
 			e.preventDefault();
-			newConversation();
+			if (!$generating) newConversation();
 		} else if (mod && e.shiftKey && e.key === 'T') {
 			e.preventDefault();
 			thinkingEnabled.update((v) => !v);

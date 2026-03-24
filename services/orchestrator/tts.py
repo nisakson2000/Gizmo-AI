@@ -1,5 +1,6 @@
 """Qwen3-TTS proxy — OpenAI-compatible text-to-speech."""
 
+import asyncio
 import os
 import httpx
 import base64
@@ -39,20 +40,26 @@ async def synthesize(
             raw_b64 = voice_clone_data_url
         payload["voice_reference"] = raw_b64
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(TTS_URL, json=payload)
-            resp.raise_for_status()
-            return resp.content
-    except httpx.ConnectError:
-        logger.error("Qwen3-TTS not reachable at %s", TTS_URL)
-        return None
-    except httpx.HTTPStatusError as e:
-        logger.error("TTS error: %s %s", e.response.status_code, e.response.text[:200])
-        return None
-    except Exception as e:
-        logger.error("TTS error: %s", e)
-        return None
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(TTS_URL, json=payload)
+                resp.raise_for_status()
+                return resp.content
+        except httpx.ConnectError:
+            logger.error("Qwen3-TTS not reachable at %s", TTS_URL)
+            return None
+        except httpx.HTTPStatusError as e:
+            if attempt == 0:
+                logger.warning("TTS returned %s, retrying in 3s (model may be reloading)", e.response.status_code)
+                await asyncio.sleep(3)
+                continue
+            logger.error("TTS error after retry: %s %s", e.response.status_code, e.response.text[:200])
+            return None
+        except Exception as e:
+            logger.error("TTS error: %s", e)
+            return None
+    return None
 
 
 async def check_health() -> bool:

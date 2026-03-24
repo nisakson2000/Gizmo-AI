@@ -160,7 +160,9 @@ Supports up to 5 rounds of automatic tool calling per request.
 | `/api/voices` | GET | List saved voice profiles |
 | `/api/voices` | POST | Upload and save a voice profile (FormData: file, name, max_duration) |
 | `/api/voices/{id}` | DELETE | Delete a saved voice profile |
+| `/api/voices/{id}/preview` | POST | Synthesize a short preview with a saved voice (JSON: `text`) |
 | `/api/media/{filename}` | GET | Serve uploaded video/media files |
+| `/api/logs/{log_name}` | GET | Tail log file (`?lines=100`, max 1000) |
 | `/api/search` | GET | Web search via SearXNG (`?q=query`) |
 | `/api/memory/list` | GET | List memory files |
 | `/api/memory/write` | POST | Write memory file |
@@ -182,9 +184,10 @@ The Think toggle is a pill button in the chat input area (similar to Claude and 
 ### File Structure
 ```
 memory/
-├── facts/          # Persistent facts (user's name, preferences)
-├── conversations/  # Conversation summaries (future use)
-└── notes/          # General notes
+├── conversations.db  # SQLite database (conversations + messages tables)
+├── facts/            # Persistent facts (user's name, preferences)
+├── conversations/    # Conversation summaries (future use)
+└── notes/            # General notes
 ```
 
 ### Injection Logic

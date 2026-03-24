@@ -7,6 +7,7 @@
 
 	let input = $state('');
 	let recording = $state(false);
+	let requestingMic = $state(false);
 	let pendingImage = $state<{ filename: string; data_url: string } | null>(null);
 	let pendingFile = $state<{ filename: string; content: string } | null>(null);
 	let pendingVideo = $state<{ filename: string; frames: string[]; duration: number; video_url?: string } | null>(null);
@@ -59,7 +60,7 @@
 
 		if (pendingVideo) {
 			addUserMessage(text || `Analyze this video: ${pendingVideo.filename} (${pendingVideo.duration}s, ${pendingVideo.frames.length} frames)`, undefined, pendingVideo.frames, pendingVideo.video_url);
-			send(text || 'Please analyze this video.', undefined, pendingVideo.frames);
+			send(text || 'Please analyze this video.', undefined, pendingVideo.frames, pendingVideo.video_url);
 			pendingVideo = null;
 		} else if (pendingImage) {
 			addUserMessage(text || `Analyze this image: ${pendingImage.filename}`, pendingImage.data_url);
@@ -208,11 +209,13 @@
 			return;
 		}
 
+		if (requestingMic) return;
 		if (!navigator.mediaDevices?.getUserMedia) {
 			showError('Microphone requires HTTPS. Access Gizmo via Tailscale HTTPS or localhost for mic support.');
 			return;
 		}
 
+		requestingMic = true;
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -248,6 +251,8 @@
 			recording = true;
 		} catch {
 			showError('Microphone access denied.');
+		} finally {
+			requestingMic = false;
 		}
 	}
 </script>

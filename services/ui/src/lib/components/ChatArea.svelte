@@ -9,8 +9,6 @@
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallBlock from './ToolCallBlock.svelte';
 
-	marked.setOptions({ breaks: true, gfm: true });
-
 	const suggestions = [
 		{ icon: 'eye', label: 'Vision', prompt: 'Describe what you see in the image I upload', desc: 'Analyze images, screenshots, diagrams' },
 		{ icon: 'video', label: 'Video', prompt: 'Describe what happens in this video', desc: 'Upload videos for frame-by-frame analysis' },
