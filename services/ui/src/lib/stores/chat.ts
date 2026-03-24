@@ -186,6 +186,23 @@ export async function truncateMessagesFrom(index: number): Promise<boolean> {
 	}
 }
 
+export async function renameConversation(id: string, title: string): Promise<boolean> {
+	try {
+		const resp = await fetch(`/api/conversations/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ title }),
+		});
+		if (resp.ok) {
+			conversations.update((convs) =>
+				convs.map((c) => (c.id === id ? { ...c, title } : c))
+			);
+			return true;
+		}
+	} catch {}
+	return false;
+}
+
 export async function deleteConversation(id: string) {
 	try {
 		await fetch(`/api/conversations/${id}`, { method: 'DELETE' });

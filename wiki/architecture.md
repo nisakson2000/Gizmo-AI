@@ -35,7 +35,7 @@ Full technical reference for Gizmo-AI. Assumes familiarity with containers and R
 └──────────────────────────────────────────────────────────────────┘
          ▲                                    ▲
   Browser/App                           Tailscale HTTPS
-  localhost:3100                 bazzite.tail163501.ts.net
+  localhost:3100                 <your-tailscale-hostname>
 ```
 
 ## Container Reference
@@ -149,6 +149,7 @@ Supports up to 5 rounds of automatic tool calling per request.
 | `/api/conversations/search` | GET | Full-text search across messages (`?q=query`) |
 | `/api/conversations/{id}` | GET | Get conversation messages |
 | `/api/conversations/{id}/export` | GET | Export as markdown or JSON (`?format=markdown\|json`) |
+| `/api/conversations/{id}` | PATCH | Rename a conversation (JSON: `{"title": "..."}`) |
 | `/api/conversations/{id}` | DELETE | Delete a conversation |
 | `/api/conversations/{id}/messages-from/{index}` | DELETE | Truncate messages from index onward (0-based) |
 | `/api/upload` | POST | Upload document (PDF, text, code — up to 50MB) |

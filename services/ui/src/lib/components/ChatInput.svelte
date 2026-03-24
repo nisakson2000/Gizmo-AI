@@ -2,10 +2,10 @@
 	import { generating, generatingConversationId, activeConversationId, addUserMessage } from '$lib/stores/chat';
 	import { send, stopGeneration } from '$lib/ws/client';
 	import { connectionStatus } from '$lib/stores/connection';
-	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen } from '$lib/stores/settings';
+	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen, focusTrigger } from '$lib/stores/settings';
+	import { toast } from '$lib/stores/toast';
 
 	let input = $state('');
-	let uploadError = $state('');
 	let recording = $state(false);
 	let pendingImage = $state<{ filename: string; data_url: string } | null>(null);
 	let pendingFile = $state<{ filename: string; content: string } | null>(null);
@@ -31,6 +31,12 @@
 				textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
 			}
 		}
+	});
+
+	// Focus input when triggered by keyboard shortcut
+	$effect(() => {
+		$focusTrigger;
+		if ($focusTrigger > 0 && textarea) textarea.focus();
 	});
 
 	const MAX_DOC_SIZE = 50 * 1024 * 1024;
@@ -87,8 +93,7 @@
 	}
 
 	function showError(msg: string) {
-		uploadError = msg;
-		setTimeout(() => (uploadError = ''), 8000);
+		toast(msg, 'error');
 	}
 
 	function handleFileUpload() {
@@ -204,7 +209,7 @@
 		}
 
 		if (!navigator.mediaDevices?.getUserMedia) {
-			showError('Microphone requires HTTPS. Open https://bazzite.tail163501.ts.net/ instead.');
+			showError('Microphone requires HTTPS. Access Gizmo via Tailscale HTTPS or localhost for mic support.');
 			return;
 		}
 
@@ -255,11 +260,6 @@
 				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
 			</svg>
 			{$connectionStatus === 'connecting' ? 'Connecting to server...' : 'Disconnected — attempting to reconnect...'}
-		</div>
-	{/if}
-	{#if uploadError}
-		<div class="max-w-3xl mx-auto mb-2 px-3 py-1.5 bg-error/10 border border-error/20 rounded-lg text-xs text-error">
-			{uploadError}
 		</div>
 	{/if}
 	{#if pendingImage}

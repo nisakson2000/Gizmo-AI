@@ -5,11 +5,15 @@
 		newConversation,
 		loadConversation,
 		deleteConversation,
+		renameConversation,
 	} from '$lib/stores/chat';
 	import { sidebarOpen, settingsOpen } from '$lib/stores/settings';
+	import { toast } from '$lib/stores/toast';
 
 	let search = $state('');
 	let isMobile = $state(false);
+	let renamingId = $state<string | null>(null);
+	let renameValue = $state('');
 	let searchResults = $state<{ id: string; title: string; updated_at: string; snippet: string }[]>([]);
 	let searching = $state(false);
 	let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,8 +86,9 @@
 			a.download = filename;
 			a.click();
 			URL.revokeObjectURL(url);
+			toast('Conversation exported', 'success');
 		} catch {
-			// Export failed silently
+			toast('Export failed', 'error');
 		}
 	}
 
@@ -117,6 +122,31 @@
 			searchTimer = null;
 		}, 500);
 	});
+
+	function startRename(id: string, currentTitle: string) {
+		renamingId = id;
+		renameValue = currentTitle;
+	}
+
+	async function finishRename() {
+		if (!renamingId) return;
+		const title = renameValue.trim();
+		if (title && title.length <= 100) {
+			await renameConversation(renamingId, title);
+		}
+		renamingId = null;
+		renameValue = '';
+	}
+
+	function cancelRename() {
+		renamingId = null;
+		renameValue = '';
+	}
+
+	function handleRenameKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') { e.preventDefault(); finishRename(); }
+		else if (e.key === 'Escape') { cancelRename(); }
+	}
 
 	function handleNewChat() {
 		newConversation();
@@ -189,7 +219,24 @@
 								? 'bg-bg-hover text-text-primary'
 								: 'text-text-secondary hover:bg-bg-hover/50 hover:text-text-primary'}"
 					>
-						<span class="truncate text-sm flex-1">{conv.title}</span>
+						{#if renamingId === conv.id}
+						<!-- svelte-ignore a11y_autofocus -->
+						<input
+							type="text"
+							bind:value={renameValue}
+							onkeydown={handleRenameKeydown}
+							onblur={finishRename}
+							autofocus
+							maxlength="100"
+							class="flex-1 bg-bg-primary border border-accent/40 rounded px-1.5 py-0.5 text-sm text-text-primary focus:outline-none min-w-0"
+							onclick={(e) => e.stopPropagation()}
+						/>
+					{:else}
+						<span
+							class="truncate text-sm flex-1"
+							ondblclick={(e) => { e.stopPropagation(); startRename(conv.id, conv.title); }}
+						>{conv.title}</span>
+					{/if}
 						<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
 							<button
 								onclick={(e) => handleExportClick(e, conv.id)}

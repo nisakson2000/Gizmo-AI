@@ -55,6 +55,15 @@ WHISPER_PORT = os.getenv("WHISPER_PORT", "8000")
 WHISPER_URL = f"http://{WHISPER_HOST}:{WHISPER_PORT}"
 
 MODEL_NAME = os.getenv("MODEL_NAME", "unknown")
+def voice_data_url(voice_id: str) -> str | None:
+    """Build a base64 data URL from a saved voice WAV file."""
+    wav_path = VOICES_DIR / f"{voice_id}.wav"
+    if not wav_path.exists():
+        return None
+    b64 = base64.b64encode(wav_path.read_bytes()).decode()
+    return f"data:audio/wav;base64,{b64}"
+
+MAX_CONVERSATIONS = int(os.getenv("MAX_CONVERSATIONS", "500"))
 CONSTITUTION_PATH = Path("/app/config/constitution.txt")
 DB_PATH = Path("/app/memory/conversations.db")
 LOGS_DIR = Path("/app/logs")
@@ -124,6 +133,28 @@ def init_db():
     conn.close()
 
 
+def prune_conversations():
+    """Delete oldest conversations if count exceeds MAX_CONVERSATIONS."""
+    conn = sqlite3.connect(str(DB_PATH))
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
+        if count <= MAX_CONVERSATIONS:
+            return
+        excess = count - MAX_CONVERSATIONS
+        old_ids = conn.execute(
+            "SELECT id FROM conversations ORDER BY updated_at ASC LIMIT ?", (excess,)
+        ).fetchall()
+        ids = [r[0] for r in old_ids]
+        placeholders = ",".join("?" * len(ids))
+        conn.execute(f"DELETE FROM messages WHERE conversation_id IN ({placeholders})", ids)
+        conn.execute(f"DELETE FROM conversations WHERE id IN ({placeholders})", ids)
+        conn.commit()
+        conn.execute("VACUUM")
+        error_log.info("Pruned %d old conversations (max %d)", len(ids), MAX_CONVERSATIONS)
+    finally:
+        conn.close()
+
+
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
@@ -140,7 +171,9 @@ def save_message(conversation_id: str, role: str, content: str, thinking: str = 
         existing = conn.execute(
             "SELECT id FROM conversations WHERE id = ?", (conversation_id,)
         ).fetchone()
+        is_new = False
         if not existing:
+            is_new = True
             title = content[:80] if role == "user" else "New conversation"
             conn.execute(
                 "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
@@ -159,6 +192,8 @@ def save_message(conversation_id: str, role: str, content: str, thinking: str = 
         conn.commit()
     finally:
         conn.close()
+    if is_new:
+        prune_conversations()
 
 
 def get_conversation_messages(conversation_id: str) -> list[dict]:
@@ -374,6 +409,7 @@ async def stream_chat(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    prune_conversations()
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     yield
 
@@ -490,13 +526,7 @@ async def ws_chat(ws: WebSocket):
             regenerate = msg.get("regenerate", False)
             # Resolve voice_id to voice_clone_ref if provided
             if voice_id and not voice_clone_ref:
-                meta_path = VOICES_DIR / f"{voice_id}.json"
-                if meta_path.exists():
-                    try:
-                        meta = json.loads(meta_path.read_text())
-                        voice_clone_ref = meta.get("data_url")
-                    except Exception:
-                        pass
+                voice_clone_ref = voice_data_url(voice_id)
             trace_id = f"gizmo-{uuid.uuid4().hex[:8]}"
 
             await ws.send_json({"type": "trace_id", "trace_id": trace_id})
@@ -931,6 +961,28 @@ async def get_conversation(conv_id: str):
     return {"id": conv_id, "messages": messages}
 
 
+@app.patch("/api/conversations/{conv_id}")
+async def rename_conversation(conv_id: str, request: Request):
+    """Rename a conversation."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+    title = str(body.get("title", "")).strip()[:100]
+    if not title:
+        return JSONResponse(status_code=400, content={"error": "Title cannot be empty"})
+    conn = get_db()
+    try:
+        existing = conn.execute("SELECT id FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+        if not existing:
+            return JSONResponse(status_code=404, content={"error": "Conversation not found"})
+        conn.execute("UPDATE conversations SET title = ? WHERE id = ?", (title, conv_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True}
+
+
 @app.get("/api/conversations/{conv_id}/export")
 async def export_conversation(conv_id: str, format: str = "markdown"):
     """Export a conversation as markdown or JSON."""
@@ -1149,10 +1201,7 @@ async def api_tts(request: Request):
 
     # If voice_id is provided, load the saved voice reference
     if voice_id and not voice_clone_data_url:
-        meta_path = VOICES_DIR / f"{voice_id}.json"
-        if meta_path.exists():
-            meta = json.loads(meta_path.read_text())
-            voice_clone_data_url = meta.get("data_url")
+        voice_clone_data_url = voice_data_url(voice_id)
 
     audio = await synthesize(text, voice, voice_clone_data_url=voice_clone_data_url)
     if audio is None:
@@ -1205,15 +1254,13 @@ async def save_voice(file: UploadFile = File(...), name: str = Form(...), max_du
     if not os.path.exists(wav_path):
         return JSONResponse(status_code=400, content={"error": "Could not process audio file"})
 
-    trimmed = Path(wav_path).read_bytes()
-    b64_data = base64.b64encode(trimmed).decode()
+    wav_size = (VOICES_DIR / f"{voice_id}.wav").stat().st_size
 
     meta = {
         "id": voice_id,
         "name": name,
         "filename": file.filename,
-        "size": len(trimmed),
-        "data_url": f"data:audio/wav;base64,{b64_data}",
+        "size": wav_size,
     }
     meta_path = VOICES_DIR / f"{voice_id}.json"
     meta_path.write_text(json.dumps(meta))
@@ -1233,15 +1280,14 @@ async def delete_voice(voice_id: str):
 @app.post("/api/voices/{voice_id}/preview")
 async def preview_voice(voice_id: str, request: Request):
     """Synthesize a short preview with a saved voice."""
-    meta_path = VOICES_DIR / f"{voice_id}.json"
-    if not meta_path.exists():
+    data_url = voice_data_url(voice_id)
+    if not data_url:
         return JSONResponse(status_code=404, content={"error": "Voice not found"})
 
-    meta = json.loads(meta_path.read_text())
     body = await request.json()
     text = body.get("text", "Hello, this is a voice preview.")
 
-    audio = await synthesize(text, voice_clone_data_url=meta["data_url"])
+    audio = await synthesize(text, voice_clone_data_url=data_url)
     if audio is None:
         return JSONResponse(status_code=503, content={"error": "TTS service unavailable"})
     return Response(content=audio, media_type="audio/wav")

@@ -98,6 +98,16 @@
 	50% { opacity: 1; }
 }
 
+/* Toast notification */
+.toast-appear {
+	animation: toastSlideIn 0.25s ease-out;
+}
+
+@keyframes toastSlideIn {
+	from { opacity: 0; transform: translateX(20px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+
 /* Streaming cursor */
 .streaming-cursor {
 	display: inline;

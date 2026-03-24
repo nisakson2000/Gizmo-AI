@@ -180,6 +180,23 @@
 						{/each}
 					</div>
 				</div>
+
+				<!-- Keyboard Shortcuts -->
+				<div>
+					<p class="text-sm font-medium mb-2">Keyboard Shortcuts</p>
+					<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+						<span class="text-text-dim">New chat</span>
+						<span class="text-text-secondary font-mono text-right">Ctrl+Shift+N</span>
+						<span class="text-text-dim">Toggle thinking</span>
+						<span class="text-text-secondary font-mono text-right">Ctrl+Shift+T</span>
+						<span class="text-text-dim">Toggle sidebar</span>
+						<span class="text-text-secondary font-mono text-right">Ctrl+Shift+S</span>
+						<span class="text-text-dim">Focus input</span>
+						<span class="text-text-secondary font-mono text-right">Ctrl+/</span>
+						<span class="text-text-dim">Close modal</span>
+						<span class="text-text-secondary font-mono text-right">Escape</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

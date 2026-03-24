@@ -205,7 +205,7 @@ Starting orchestrator and UI...
 ╚═══════════════════════════════════════════════════════╝
 
 Tailscale: access via your Tailscale IP on port 3100
-HTTPS:     https://bazzite.tail163501.ts.net/
+HTTPS:     https://<your-tailscale-hostname>/
 ```
 
 ## Step 8 — Verify Everything Works
@@ -245,7 +245,7 @@ You should see a dark-themed chat interface with "Gizmo" centered and capability
 tailscale serve --https=443 http://127.0.0.1:3100
 ```
 
-This provides a valid Let's Encrypt certificate at `https://bazzite.tail163501.ts.net/`. The browser requires a secure context (HTTPS or localhost) for microphone access.
+This provides a valid Let's Encrypt certificate at `https://<your-tailscale-hostname>/`. The browser requires a secure context (HTTPS or localhost) for microphone access.
 
 **Firewall note:** If port 3100 is blocked on your server's firewall:
 ```bash
@@ -283,7 +283,7 @@ sudo firewall-cmd --reload
 
 ### Microphone not working
 - **From localhost:** Should work — browsers treat localhost as secure context
-- **From other devices:** Must use HTTPS. Set up `tailscale serve --https=443 http://127.0.0.1:3100` and access via `https://bazzite.tail163501.ts.net/`
+- **From other devices:** Must use HTTPS. Set up `tailscale serve --https=443 http://127.0.0.1:3100` and access via `https://<your-tailscale-hostname>/`
 - Check browser permissions: click the lock icon in the address bar
 
 ### Voice Studio upload fails

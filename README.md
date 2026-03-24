@@ -23,7 +23,9 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Streaming chat** with persistent server-side conversation history, LLM-generated titles, and sidebar management (search, load, delete)
 - **Regenerate & edit** — re-roll any response or edit a sent message and resubmit, with full response history navigation (`< 1/N >` arrows) across both prompts and responses
 - **Conversation export** — download any conversation as a formatted Markdown file from the sidebar
-- **Full-text search** — press Enter in the sidebar search to find conversations by message content, not just title
+- **Full-text search** — search sidebar filters by title instantly; also searches message content automatically
+- **Keyboard shortcuts** — Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+/ (focus input), Escape (close modals)
+- **Conversation rename** — double-click any conversation title in the sidebar to rename it
 - **Toggleable thinking mode** — model reasons step-by-step in collapsible blocks before responding
 - **Vision** — analyze images directly in chat via the multimodal vision projector (mmproj)
 - **Video analysis** — upload video files, extract frames, and analyze visual content with the vision model; video playback in chat

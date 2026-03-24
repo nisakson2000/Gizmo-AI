@@ -23,6 +23,12 @@
 | **Full-text search** | Title-only filter | SQLite LIKE search across all messages |
 | **TTS truncation** | Silent truncation at 4,000 chars | Info message below audio player |
 | **Constitution** | 61 lines | 71 lines — added formatting and web search guidance |
+| **Toast system** | Per-component inline errors | Global toast notifications (bottom-right, auto-dismiss) |
+| **Keyboard shortcuts** | None | Ctrl+Shift+N/T/S, Ctrl+/, Escape |
+| **Conversation rename** | Not supported | Double-click title, PATCH endpoint |
+| **Voice metadata** | Base64 stored in JSON (~1MB each) | WAV on disk, no base64 in metadata |
+| **Conversation pruning** | Unbounded growth | MAX_CONVERSATIONS=500, auto-prune oldest |
+| **Hardcoded URLs** | Tailscale hostname in UI code | Generic HTTPS message, placeholder in docs |
 
 ### V4 Issues Resolved in V5
 

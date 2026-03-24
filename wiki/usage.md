@@ -65,7 +65,7 @@ Click the **microphone button** in the input area to dictate your message.
 
 - Works with the built-in mic or any connected audio device
 - Audio is transcribed via Whisper and inserted as your message text
-- **Requires HTTPS** for browser mic access — use `https://bazzite.tail163501.ts.net/` from other devices on your tailnet, or `localhost` which is always considered secure
+- **Requires HTTPS** for browser mic access — use `https://<your-tailscale-hostname>/` from other devices on your tailnet, or `localhost` which is always considered secure
 
 ## Voice Studio
 
@@ -166,6 +166,7 @@ The Code Playground offers two modes:
 - **Auto-titles** — after the first exchange, the LLM generates a concise 3-5 word title (replaces truncated first message)
 - **Click a conversation** to load its history (auto-scrolls to the latest message)
 - **Search** conversations by title (instant filter as you type) or by message content (press **Enter** for full-text search across all messages)
+- **Rename** a conversation by double-clicking its title in the sidebar (Enter to save, Escape to cancel)
 - **Export** a conversation as Markdown using the download button (hover to reveal) next to each conversation
 - **Delete** a conversation with the X button (hover to reveal)
 - **New Chat** starts a fresh conversation with no history
@@ -191,12 +192,24 @@ Access via the **gear icon** in the header.
 | **Context Length** | Slider: 2,048–131,072 tokens. Controls conversation history windowing — orchestrator drops oldest messages to fit within the selected token budget. |
 | **Service Health** | Live status of all backend services |
 
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+Shift+N** | New conversation |
+| **Ctrl+Shift+T** | Toggle thinking mode |
+| **Ctrl+Shift+S** | Toggle sidebar |
+| **Ctrl+/** | Focus chat input |
+| **Escape** | Close any open modal |
+
+Shortcuts use Ctrl on Linux/Windows and Cmd on macOS. Most shortcuts don't fire while typing in an input field (exceptions: Escape and Ctrl+/ work from anywhere).
+
 ## Remote Access via Tailscale
 
 Gizmo is accessible from any device on your Tailscale network.
 
 - **HTTP**: `http://{tailscale-ip}:3100` — works for chat, but mic access requires HTTPS
-- **HTTPS**: `https://bazzite.tail163501.ts.net/` — valid Let's Encrypt certificate via `tailscale serve`, enables microphone access from laptops/phones
+- **HTTPS**: `https://<your-tailscale-hostname>/` — valid Let's Encrypt certificate via `tailscale serve`, enables microphone access from laptops/phones
 
 Set up HTTPS:
 ```bash

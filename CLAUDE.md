@@ -124,6 +124,12 @@ Everything is containerized via Podman.
 - Full-text search: GET /api/conversations/search?q=, press Enter in sidebar to search message content
 - TTS truncation info: tts_info WS event shows "Audio covers first ~4,000 of N characters" below audio player
 - Constitution: added Output Formatting and Web Search sections, tightened tool discipline and conciseness rules
+- Toast notification system: global toast store + component, replaces inline error/success states across all components
+- Keyboard shortcuts: Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+Shift+S (toggle sidebar), Ctrl+/ (focus input), Escape (close modals)
+- Conversation rename: double-click title in sidebar, PATCH /api/conversations/{id}
+- Voice metadata cleanup: WAV files on disk, no base64 in JSON metadata, data URL built on-the-fly
+- Conversation pruning: MAX_CONVERSATIONS env var (default 500), prunes oldest on startup and new conversation creation
+- Hardcoded Tailscale URL removed from UI code, wiki docs use placeholder syntax
 
 ## Known Issues
 - SELinux requires :Z suffix on ALL volume mounts in docker-compose.yml

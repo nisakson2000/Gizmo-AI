@@ -20,3 +20,4 @@ export const voiceStudioOpen = writable(false);
 export const memoryManagerOpen = writable(false);
 export const codePlaygroundOpen = writable(false);
 export const ttsVoiceId = persistedWritable<string | null>('gizmo:ttsVoiceId', null);
+export const focusTrigger = writable(0);
