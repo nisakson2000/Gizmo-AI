@@ -105,25 +105,26 @@ Tradeoffs:
 
 **Retrieval-Augmented Generation (RAG)** means injecting relevant information into the context window at inference time, rather than relying solely on what the model learned during training.
 
-In Gizmo-AI v1, this takes the form of a simple file-based memory system:
+In Gizmo-AI, this takes the form of a file-based memory system with BM25 ranking:
 - You tell Gizmo to "remember that my name is Nick"
 - Gizmo writes a file to `memory/facts/user_name.txt`
-- On future conversations, the orchestrator scans memory files for keywords matching your message
-- Relevant memories are injected into the system prompt
+- On future conversations, the orchestrator tokenizes your message, filters stop words, and scores all memory files using **BM25** (a TF-IDF ranking algorithm)
+- A **recency boost** is applied — memories modified within the last 30 days get up to 1.5x higher scores
+- The top 5 matching memories (up to 800 characters each) are injected into the system prompt
 
-This is basic keyword matching — v2 will use ChromaDB for semantic similarity search, finding relevant memories based on meaning rather than exact keyword overlap.
+BM25 is significantly better than basic keyword matching because it accounts for term frequency, document length, and corpus statistics. A memory that mentions your exact question terms many times in a short file ranks higher than one that mentions them once in a long file.
 
 ## What Is Tool Calling?
 
 Modern LLMs can be trained to output structured JSON that triggers external functions. In Gizmo-AI:
 
-1. The model receives tool definitions (web_search, read_memory, write_memory, list_memories) in its context
+1. The model receives tool definitions (web_search, read_memory, write_memory, list_memories, run_code) in its context
 2. When appropriate, instead of regular text, the model outputs a JSON tool call: `{"name": "web_search", "arguments": {"query": "AI news"}}`
 3. The orchestrator parses this JSON, executes the tool (queries SearXNG for web results)
 4. The results are injected back into the conversation context
-5. The model then responds with full knowledge of what the tool returned
+5. The model can then respond — or make another tool call if needed (up to 5 rounds of chained tool calls)
 
-This is how Gizmo searches the web without the model itself having internet access. The model decides when to use tools based on the conversation — if you ask about current events, it will call `web_search`. If you ask it to remember something, it will call `write_memory`.
+This is how Gizmo searches the web without the model itself having internet access. The model decides when to use tools based on the conversation — if you ask about current events, it will call `web_search`. If you ask it to remember something, it will call `write_memory`. If you ask it to run a calculation, it will call `run_code` to execute Python in a sandboxed container.
 
 ## What Is a System Prompt?
 
@@ -135,4 +136,4 @@ It defines:
 - Available tools and capabilities
 - Behavioral guidelines
 
-The system prompt is the primary way to customize the model's personality without retraining. Edit `constitution.txt` to change how Gizmo behaves.
+The system prompt is the primary way to customize the model's personality without retraining. Edit `constitution.txt` to change how Gizmo behaves. Gizmo-AI's constitution uses XML-style section tags (`<identity>`, `<style>`, `<tool-discipline>`, etc.) to help the model parse and follow different instruction sets without cross-contamination — structured prompts improve instruction adherence on smaller models.

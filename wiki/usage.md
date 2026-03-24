@@ -179,17 +179,42 @@ Conversations are stored in a server-side SQLite database, accessible from any d
 - **Edit**: Hover any user message to reveal the **Edit** button (pencil icon). Click it to open an inline editor. Modify the text and click **Save** — the edited message is resubmitted. Use the `< 1/2 >` arrows on both the user message and the response to navigate between prompt/response pairs. Press **Escape** or **Cancel** to discard changes.
 - **Response history**: All previous responses are preserved when regenerating or editing. Navigation arrows appear on hover. Responses are linked to the prompt that generated them — navigating a response automatically shows the corresponding prompt, and navigating a prompt jumps to its latest response. Image and video attachments are preserved across regenerations and edits.
 
+## Themes
+
+Gizmo-AI includes a Nintendo console-inspired theme system. Select a theme in **Settings → Theme**.
+
+**Available themes:**
+
+| Theme | Era | Visual Style |
+|-------|-----|-------------|
+| Default | — | Dark mode with warm amber accent |
+| NES | 8-bit | Gray console body, red stripe, cartridge slot, pixel font, scanlines |
+| SNES | 16-bit | Gray-purple body, YXBA colored buttons, pixel font, scanlines |
+| GBA | Handheld | Indigo body, D-pad, A/B buttons, shoulder buttons, speaker grille, "GAME BOY ADVANCE" label |
+| N64 | 3D Era | Charcoal body, 4-color rainbow strip, controller ports |
+| GameCube | 3D Era | Deep indigo body, handle, disc cover, rounded plastic feel |
+| Wii | Modern | White glossy body, disc slot, blue LED, clean minimal |
+| DS | Dual-Screen | Silver metallic body, dual-screen layout with visible hinge gap, D-pad, ABXY |
+| 3DS | Dual-Screen | Dark body with teal accents, dual-screen, circle pad, 3D depth slider |
+| Switch | Modern | Dark tablet with neon red/blue Joy-Con rails, analog sticks, button clusters |
+
+Handheld themes (GBA, DS, 3DS, Switch) feature physical console elements — buttons, analog sticks, branded labels, and screen bezels that make the UI resemble the actual device. DS and 3DS themes show two separate screen bezels with a visible hinge gap between the chat area and input area.
+
+All console chrome is stripped on mobile screens (< 640px) for usability.
+
 ## Settings
 
 Access via the **gear icon** in the header.
 
 | Setting | Description |
 |---------|-------------|
+| **Theme** | Select a visual theme (Default + 9 Nintendo console themes) |
 | **Read Responses Aloud** | Toggle spoken responses ON/OFF (Qwen3-TTS, GPU-accelerated) |
 | **TTS Voice** | Select which cloned voice to use for chat TTS (default or any saved voice) |
 | **Voice Studio** | Shortcut to open Voice Studio |
 | **Memory Manager** | Shortcut to open Memory Manager (view, add, delete memories) |
 | **Context Length** | Slider: 2,048–131,072 tokens. Controls conversation history windowing — orchestrator drops oldest messages to fit within the selected token budget. |
+| **Keyboard Shortcuts** | Quick reference for all keyboard shortcuts |
 | **Service Health** | Live status of all backend services |
 
 ## Keyboard Shortcuts

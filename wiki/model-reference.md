@@ -56,7 +56,37 @@ All quantizations from [mradermacher/Huihui-Qwen3.5-9B-abliterated-GGUF](https:/
 | **Q8_0** | **~9.5GB** | **~12GB** | **Lossless** | **Used by Gizmo — best quality** |
 | FP16 | ~18GB | ~20GB | Full precision | Requires 20GB+ VRAM |
 
-**How to choose:** Pick the largest quant that fits in your VRAM with ~2-3GB headroom for the KV cache and OS overhead. With Qwen3-TTS also loaded (~4GB), the 9B Q8_0 uses ~16.8GB total on a 24GB card.
+**How to choose:** Pick the largest quant that fits in your VRAM with headroom for the KV cache, TTS model, and OS overhead. With Qwen3-TTS also loaded (~4GB when active), the 9B Q8_0 uses ~16.8GB peak on a 24GB card.
+
+## llama.cpp Configuration
+
+Gizmo-AI's llama.cpp instance is tuned for the RTX 4090:
+
+| Flag | Value | Purpose |
+|------|-------|---------|
+| `--n-gpu-layers 99` | All layers | Full GPU offload — nothing runs on CPU |
+| `--ctx-size 32768` | 32K tokens | Context window (native 262K, limited for VRAM) |
+| `--flash-attn on` | Enabled | Memory-efficient attention algorithm |
+| `--cache-type-k q8_0` | Quantized | **KV cache quantization** — halves cache VRAM (~6GB saved) |
+| `--cache-type-v q8_0` | Quantized | Near-lossless quality, frees VRAM for TTS coexistence |
+| `--batch-size 4096` | 4K tokens | Prompt processing batch (faster than default 2048) |
+| `--ubatch-size 1024` | 1K tokens | Physical micro-batch size |
+| `--parallel 2` | 2 slots | Concurrent sequences (chat + title generation) |
+| `--cont-batching` | Enabled | Continuous batching for concurrent requests |
+
+### VRAM Budget with KV Cache Quantization
+
+| Component | VRAM |
+|-----------|------|
+| Model weights (Q8_0) | ~9.5 GB |
+| KV cache (32K × 2 slots, Q8_0) | ~6.2 GB |
+| CUDA overhead | ~1.0 GB |
+| **LLM total** | **~16.7 GB** |
+| TTS when loaded | ~4.0 GB |
+| **Peak (LLM + TTS)** | **~20.7 GB** |
+| **Headroom on 24GB** | **~3.3 GB** |
+
+Without KV cache quantization (FP16), the KV cache would consume ~12.3 GB, leaving virtually no headroom for TTS. The Q8_0 KV cache is the single most impactful VRAM optimization.
 
 ## Thinking Mode Details
 

@@ -97,7 +97,7 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
 | `tool_call` | `tool`, `status` | Tool execution started |
 | `tool_result` | `tool`, `result` | Tool execution result |
 | `tts_info` | `message` | TTS truncation notice (when response exceeds 4,000 chars) |
-| `audio` | `url` | Audio data URL (base64 WAV) |
+| `audio` | `url` | Audio file URL (server-stored WAV) |
 | `title` | `title`, `conversation_id` | LLM-generated conversation title (async, after first exchange) |
 | `done` | `trace_id`, `conversation_id` | Generation complete |
 | `error` | `error`, `trace_id` | Error occurred |
@@ -214,13 +214,14 @@ Tools follow the OpenAI function-calling format. llama.cpp supports this nativel
 3. Orchestrator detects the tool call (via API `finish_reason: "tool_calls"` or JSON parsing)
 4. Tool is executed asynchronously
 5. Result is added to messages as a `tool` role message
-6. Generation resumes with tool results in context
+6. Generation resumes with tool results in context — model may issue additional tool calls
+7. Up to **5 rounds** of chained tool calls are supported (both WebSocket and REST paths), enabling multi-step workflows like "search for X then save a note about it"
 
 ## Constitution System
 
 The model's persona and behavior are defined by a single constitution file:
 
-- **`config/constitution.txt`** — Prose base prompt defining identity, capabilities, and behavior rules. Lines starting with `#` are stripped as comments. Everything else is injected as the base system prompt. Relevant memories from the BM25 memory system are appended after the constitution content.
+- **`config/constitution.txt`** — System prompt with XML-tagged sections (`<identity>`, `<style>`, `<capabilities>`, `<tool-discipline>`, `<memory-rules>`, `<code-execution>`, `<web-search>`, `<response-quality>`, `<precision-awareness>`). Lines starting with `#` are stripped as comments. The XML structure helps the 9B model parse and follow different instruction sets without cross-contamination. Includes an explicit 5-step tool decision tree and abliteration-aware precision rules. Relevant memories from the BM25 memory system are appended after the constitution content.
 
 ## Configuration Files
 
@@ -281,12 +282,15 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   └── src/
 │   │       ├── app.html                   # HTML shell
 │   │       ├── app.css                    # TailwindCSS + design tokens
+│   │       ├── themes.css                 # Nintendo console theme system (9 themes + console frames)
 │   │       ├── routes/+page.svelte        # Main page (mounts all modals)
 │   │       ├── routes/+layout.svelte      # Root layout
 │   │       └── lib/
 │   │           ├── stores/chat.ts         # Conversation state (videoUrl support)
 │   │           ├── stores/settings.ts     # User preferences (voiceStudioOpen, codePlaygroundOpen, memoryManagerOpen, ttsVoiceId)
 │   │           ├── stores/connection.ts   # WebSocket state
+│   │           ├── stores/theme.ts        # Nintendo theme store (persisted to localStorage)
+│   │           ├── stores/toast.ts        # Global toast notification store
 │   │           ├── ws/client.ts           # WebSocket manager (sends voice_id when set)
 │   │           ├── utils/sanitize.ts      # HTML sanitization
 │   │           ├── actions/highlight.ts   # Code syntax highlighting
@@ -301,7 +305,8 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │               ├── MemoryManager.svelte # Memory CRUD modal
 │   │               ├── CodePlayground.svelte # Code execution modal (Run + Ask Gizmo)
 │   │               ├── ThinkingBlock.svelte # Collapsible thinking display
-│   │               └── ToolCallBlock.svelte # Tool call display (includes run_code)
+│   │               ├── ToolCallBlock.svelte # Tool call display (includes run_code)
+│   │               └── Toast.svelte       # Global toast notification overlay
 │   ├── tts/
 │   │   ├── Dockerfile                     # Qwen3-TTS container (PyTorch + CUDA)
 │   │   ├── requirements.txt               # qwen-tts, fastapi, uvicorn

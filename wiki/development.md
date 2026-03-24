@@ -87,7 +87,7 @@ The UI is a SvelteKit app using Svelte 5 runes mode:
 - **Props:** Use `$props()` with `$bindable()` for two-way binding
 - **Styling:** TailwindCSS with custom design tokens defined in `app.css`
 - **Components:** `services/ui/src/lib/components/`
-- **Stores:** `services/ui/src/lib/stores/` (chat.ts, settings.ts, connection.ts)
+- **Stores:** `services/ui/src/lib/stores/` (chat.ts, settings.ts, connection.ts, theme.ts, toast.ts)
 
 **Important:** UI changes require rebuilding the container image:
 ```bash
@@ -97,13 +97,11 @@ The Dockerfile copies the build output at image build time. Just running `up -d`
 
 ## Future Features
 
-- **Agent mode** — multi-step task execution with tool chaining
 - **Model hot-swap** — switch models via API without restarting
 - **Prompt template editor** — edit constitution from the UI
 - **Mobile-optimized layout** — responsive design for phone access via Tailscale
 - **Usage analytics** — token counts, response times, cost estimation dashboard
 - **Streaming TTS** — chunk audio as it generates for lower latency
-- **Conversation export** — download conversation history as markdown or JSON
 - **Image generation** — Stable Diffusion integration
 - **ChromaDB semantic memory** — upgrade BM25 to vector similarity search
 
