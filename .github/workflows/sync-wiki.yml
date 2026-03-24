@@ -1,0 +1,44 @@
+name: Sync wiki/ to GitHub Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ['wiki/**']
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Checkout wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy and rename files
+        run: |
+          cp wiki/architecture.md    wiki-repo/Architecture.md
+          cp wiki/development.md     wiki-repo/Development.md
+          cp wiki/how-ai-works.md    wiki-repo/How-the-AI-Works.md
+          cp wiki/model-reference.md wiki-repo/Model-Reference.md
+          cp wiki/setup.md           wiki-repo/Setup.md
+          cp wiki/usage.md           wiki-repo/Usage.md
+
+      - name: Push if changed
+        run: |
+          cd wiki-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to sync"
+          else
+            git commit -m "Auto-sync from wiki/ in main repo"
+            git push
+          fi
