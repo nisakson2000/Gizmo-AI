@@ -20,34 +20,43 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 
 ## Features
 
-- **Streaming chat** with persistent server-side conversation history, LLM-generated titles, and sidebar management (search, load, delete)
-- **Regenerate & edit** — re-roll any response or edit a sent message and resubmit, with full response history navigation (`< 1/N >` arrows) across both prompts and responses
-- **Conversation export** — download any conversation as a formatted Markdown file from the sidebar
-- **Full-text search** — search sidebar filters by title instantly; also searches message content automatically
+### Chat & Conversation
+- **Streaming chat** with persistent server-side conversation history and LLM-generated titles
+- **Regenerate & edit** — re-roll any response or edit a sent message and resubmit, with full response history navigation (`< 1/N >` arrows)
+- **Full-text search** — sidebar filters by title instantly; press Enter for deep search across all message content
+- **Conversation export** — download as formatted Markdown from the sidebar
+- **Conversation rename** — double-click any title in the sidebar to rename
 - **Keyboard shortcuts** — Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+/ (focus input), Escape (close modals)
-- **Conversation rename** — double-click any conversation title in the sidebar to rename it
-- **Toggleable thinking mode** — model reasons step-by-step in collapsible blocks before responding
+
+### AI Capabilities
+- **Thinking mode** — model reasons step-by-step in collapsible blocks before responding (toggle on/off)
 - **Vision** — analyze images directly in chat via the multimodal vision projector (mmproj)
-- **Video analysis** — upload video files, extract frames, and analyze visual content with the vision model; video playback in chat
-- **Audio transcription** — upload M4A, MP3, or WAV files for automatic Whisper transcription and LLM analysis
-- **Voice Studio** — dedicated TTS playground with voice cloning: upload reference audio, name and save multiple voices, select which voice to use, adjustable clip duration (30/60/90/120s)
-- **Speech-to-text** — dictate messages via microphone using Whisper transcription
-- **Text-to-speech** via Qwen3-TTS — GPU-accelerated neural voice cloning with saved voice profiles, auto-unloads from VRAM when idle
-- **Function calling** — model autonomously uses tools (web search, memory read/write, code execution) based on context
+- **Video analysis** — upload video files, extract frames, analyze visual content; video playback in chat
+- **Audio transcription** — upload M4A/MP3/WAV for automatic Whisper transcription and LLM analysis
+- **Multi-round tool calling** — model autonomously chains up to 5 rounds of tool calls (web search, memory, code execution) in a single exchange
 - **Web search** via self-hosted SearXNG — no API keys needed
 - **Document upload** — analyze PDFs, text files, and code directly in chat (up to 50MB)
-- **Memory system** — Gizmo remembers facts across conversations via BM25-ranked file storage with recency weighting
-- **Memory Manager** — view, add, and delete memories from the UI
-- **Code execution sandbox** — run Python code in an isolated Podman container (no network, 256MB RAM, read-only filesystem)
-- **Code Playground** — dedicated modal for writing and running Python directly, or sending code to Gizmo for analysis
-- **Dark-themed UI** — code syntax highlighting, markdown rendering, auto-reconnecting WebSocket
+- **Memory system** — remembers facts across conversations via BM25-ranked file storage with recency weighting
+
+### Voice
+- **Voice Studio** — dedicated TTS playground with voice cloning: upload reference audio, name and save voices, adjustable clip duration (30/60/90/120s)
+- **Text-to-speech** via Qwen3-TTS — GPU-accelerated neural voice cloning, auto-unloads from VRAM when idle
+- **Speech-to-text** — dictate messages via microphone using Whisper transcription
+- **TTS voice selection** — choose any cloned voice from Voice Studio for chat responses
+
+### Tools
+- **Code execution sandbox** — run Python in an isolated Podman container (no network, 256MB RAM, read-only filesystem; numpy, pandas, matplotlib, sympy, scipy)
+- **Code Playground** — dedicated modal for writing and running Python, or sending code to Gizmo for analysis
+- **Memory Manager** — browse, add, and delete memories from the UI
+
+### UI & System
+- **Nintendo console themes** — 10 themes including NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, and Switch with physical console frames, buttons, and branded labels
+- **Toast notifications** — non-intrusive feedback for copy, export, and error events
 - **Service health dashboard** — live status monitoring for all backend services
-- **Customizable persona** — single constitution file (`config/constitution.txt`) defines identity, capabilities, and behavior rules
-- **Vision-aware prompting** — detailed vision analysis instructions injected only when images/video are present
-- **TTS voice selection** — choose a cloned voice from the Voice Studio for chat TTS responses
-- **Per-token timeout** — 60-second inactivity detection prevents model hangs during generation
+- **Customizable persona** — XML-tagged constitution file (`config/constitution.txt`) with tool decision framework and abliteration-aware precision rules
+- **KV cache quantization** — Q8_0 quantized KV cache frees ~6GB VRAM for LLM + TTS coexistence
 - **Dual API** — WebSocket for streaming UI, REST endpoint (`/api/chat`) for programmatic access
-- **Tailscale HTTPS** — access from any device on your tailnet with valid Let's Encrypt cert for secure mic access
+- **Tailscale HTTPS** — access from any device on your tailnet with valid cert for secure mic access
 - **100% local** — your data never leaves your machine
 
 ## Hardware Requirements
@@ -60,7 +69,7 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 | **OS** | Linux (Ubuntu, Fedora, Arch) | Bazzite OS (Fedora) |
 | **Runtime** | Podman or Docker + NVIDIA container support | Podman 5.8 |
 
-VRAM breakdown: the 9B LLM loads at ~10GB (Q8_0), Qwen3-TTS adds ~4GB when active (auto-unloads after 60s idle). Total peak usage is ~16.8GB, leaving comfortable headroom on a 24GB card. Whisper runs on CPU and does not consume VRAM.
+VRAM breakdown: the 9B LLM uses ~9.5GB for weights plus ~6.2GB for the quantized KV cache (Q8_0). Qwen3-TTS adds ~4GB when active (auto-unloads after 60s idle). Peak with both loaded is ~20.7GB on a 24GB card, leaving ~3.3GB headroom. Whisper runs on CPU and does not consume VRAM.
 
 ## Quick Start
 
@@ -106,7 +115,7 @@ bash scripts/start.sh            # Starts all 6 services
 | [Setup Guide](wiki/setup.md) | Step-by-step installation |
 | [Usage Guide](wiki/usage.md) | Day-to-day usage |
 | [Development](wiki/development.md) | Extending the stack |
-| [Model Reference](wiki/model-reference.md) | Qwen3.5-9B specs, quant table, and TTS details |
+| [Model Reference](wiki/model-reference.md) | Qwen3.5-9B specs, quant table, llama.cpp config, VRAM budget, TTS and Whisper details |
 
 ## License
 
