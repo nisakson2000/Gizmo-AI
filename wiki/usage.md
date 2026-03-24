@@ -173,8 +173,9 @@ Conversations are stored in a server-side SQLite database, accessible from any d
 
 ## Regenerate & Edit
 
-- **Regenerate**: Hover the last assistant message to reveal the **Regenerate** button (cycle icon). Click it to delete the response and re-send the same user message for a fresh answer.
-- **Edit**: Hover any user message to reveal the **Edit** button (pencil icon). Click it to open an inline editor. Modify the text and click **Save** — everything from that message onward is deleted and the edited message is resubmitted. Press **Escape** or **Cancel** to discard changes.
+- **Regenerate**: Hover the last assistant message to reveal the **Regenerate** button (cycle icon). Click it to re-send the same user message for a fresh answer. The previous response is preserved — use the `< 1/2 >` arrows to navigate between all response versions.
+- **Edit**: Hover any user message to reveal the **Edit** button (pencil icon). Click it to open an inline editor. Modify the text and click **Save** — the edited message is resubmitted. Use the `< 1/2 >` arrows on both the user message and the response to navigate between prompt/response pairs. Press **Escape** or **Cancel** to discard changes.
+- **Response history**: All previous responses are preserved when regenerating or editing. Navigation arrows appear on hover. Responses are linked to the prompt that generated them — navigating a response automatically shows the corresponding prompt, and navigating a prompt jumps to its latest response. Image and video attachments are preserved across regenerations and edits.
 
 ## Settings
 

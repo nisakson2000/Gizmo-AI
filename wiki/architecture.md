@@ -110,7 +110,8 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
   "conversation_id": "uuid-or-null",
   "tts": false,
   "voice_id": "optional-voice-id",
-  "context_length": 32768
+  "context_length": 32768,
+  "regenerate": false
 }
 ```
 

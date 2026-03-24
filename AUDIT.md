@@ -17,6 +17,7 @@
 | **Regenerate response** | Not supported | Hover last assistant message → regenerate button |
 | **Message editing** | Not supported | Hover user message → edit → resubmit |
 | **Message truncation API** | Not supported | `DELETE /api/conversations/{id}/messages-from/{index}` |
+| **Response history** | Not supported | Variant navigation with `< 1/N >` arrows, prompt-aware sync |
 
 ### V4 Issues Resolved in V5
 

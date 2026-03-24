@@ -116,6 +116,9 @@ Everything is containerized via Podman.
 - LLM-generated titles: first exchange triggers async title generation (5-word max), sent via WebSocket "title" event
 - Regenerate response: hover last assistant message → regenerate button. Uses DELETE /api/conversations/{id}/messages-from/{index}
 - Message editing: hover user message → edit button → inline textarea → Save truncates history and resubmits
+- Response history: regenerate/edit preserves all previous responses as variants with < 1/N > navigation arrows
+- Prompt-aware variants: each response tracks which prompt generated it (promptVariantIndex). Navigating responses syncs the prompt display; navigating prompts jumps to the latest response for that prompt.
+- Backend regenerate flag: WS payload `regenerate: true` skips saving duplicate user message and preserves multimodal content
 
 ## Known Issues
 - SELinux requires :Z suffix on ALL volume mounts in docker-compose.yml
