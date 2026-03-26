@@ -215,23 +215,31 @@ All console chrome and screen effects are stripped on mobile screens (< 640px) f
 
 Access via the **Tasks** icon in the left navigation rail, or navigate to `/tracker`.
 
-The Tracker is a built-in task and note management system with LLM integration.
+The Tracker is a built-in task and note management system with LLM integration. The interface uses a full-width list layout with slide-in overlay panels for editing.
 
 **Tasks:**
-- Create, edit, and delete tasks with title, description, status, priority, tags, and due date
-- Set recurrence (daily, weekly, monthly) for repeating tasks
-- Add subtasks for breaking work into smaller pieces
-- Filter by status, priority, or tag
-- Mark complete with a single click
+- Create tasks via the quick-add card at the top (type and press Enter)
+- Card-based task list with colored left borders indicating priority (red=urgent, accent=high, yellow=medium, dim=low)
+- SVG status circles: click to cycle through todo → active → done
+- Filter by status (with counts), tag (dropdown), and sort by priority or due date
+- Auto-save: edits in the detail panel save automatically after 800ms
+- Segmented controls for status and priority, tag pills with Enter/comma to add
+- Subtask progress shown as "2/5" on parent tasks
+- Overdue tasks highlighted with a red ring and red due-date pill
+- Set recurrence (daily, weekly, biweekly, monthly, yearly) for repeating tasks
 
 **Notes:**
-- Create and edit freeform notes with title, content, and tags
-- Filter by tag
+- Card-based note list with pinned notes visually distinguished (accent tint)
+- 2-line content preview, search by title/content, filter pinned only
+- Auto-save in the editor panel, tag pills, pin toggle button
 
 **LLM Chat:**
-- Use the chat panel within the Tracker to create tasks via natural language
+- Toggle the "Ask Gizmo" button in the header to open the chat overlay
+- Create, update, complete, and delete tasks via natural language
 - Example: "Add a high priority task to review the security audit by Friday"
-- The LLM parses your intent and creates structured tasks automatically
+- Example: "Mark the grocery shopping task as done"
+- The LLM verifies task identity before completing or deleting to prevent mix-ups
+- Tool call progress shown as styled cards (pulse dot when running, checkmark when done)
 
 ## Settings
 

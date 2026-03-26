@@ -209,11 +209,16 @@ Every code change, feature addition, or configuration update MUST include corres
 - SQLite database at /app/tracker/tracker.db (tasks + notes tables)
 - REST: CRUD for tasks and notes under /api/tracker/
 - Tasks: title, description, status, priority, tags, due_date, recurrence, subtasks
-- Notes: title, content, tags
+- Notes: title, content, tags, pinned
 - LLM chat via /ws/tracker WebSocket — natural language task creation
-- Tracker prompt: config/tracker-prompt.txt
+- Tracker prompt: config/tracker-prompt.txt (includes CRITICAL ID verification instruction)
 - Backend: tracker.py (FastAPI router), tracker_db.py (SQLite), tracker_tools.py (LLM tools), llm.py (LLM helper)
-- Frontend: /tracker route, 9 Svelte components, dedicated store and WS client
+- Context format: `id=xxx | [priority] "Title"` — ID leads each line to prevent LLM ID-title confusion
+- Frontend: /tracker route, 9 Svelte components (TagFilter deleted — tags now in TaskList dropdown), dedicated store and WS client
+- Layout: full-width list with slide-in overlay panels (TaskDetail, NoteEditor, TrackerChat) from right edge
+- Auto-save: TaskDetail and NoteEditor debounce at 800ms, save on close/unmount via onDestroy
+- TaskItem: card-based with colored priority left border, SVG status circles, overdue ring, subtask progress
+- TaskDetail: segmented status/priority controls, tag pill input (Enter/comma/Backspace)
 - Icon rail navigation: Chat, Tasks, Settings in left sidebar
 
 ## Enhanced Console Themes
@@ -241,3 +246,4 @@ Every code change, feature addition, or configuration update MUST include corres
 - [2026-03-14] V4 upgrade — BM25 memory, Memory Manager UI, code execution sandbox, Code Playground, vision prompt injection, per-token timeout, audio suggestion card, TTS voice selection, tool discipline, all docs updated
 - [2026-03-23] V5 upgrade — Toast notifications, keyboard shortcuts, conversation rename/export/search, streaming perf, response history, regenerate/edit, conversation pruning, Nintendo theme system (9 console themes), stack audit (KV cache quantization, constitution rewrite with XML tags, multi-round WS tool loop, tool schema tightening)
 - [2026-03-25] V5.1 — Enhanced console themes (per-console sounds, screen effects, message styling, boot animations), Tracker module (tasks + notes + LLM chat), icon rail navigation, copy buttons on code output, Code Playground state reset, input padding fix, constitution code block softening
+- [2026-03-26] V5.2 — Tracker redesign (overlay panels, card-based items, auto-save, segmented controls, tag pills, progress ring), AI task completion fix (ID-first context format, verification prompt)
