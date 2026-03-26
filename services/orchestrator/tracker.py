@@ -58,12 +58,11 @@ def _build_context_summary_sync(max_tokens: int = 500) -> str:
     if open_tasks:
         parts.append("## Open Tasks")
         for t in open_tasks:
-            line = f"- [{t['priority']}] {t['title']}"
+            line = f"- id={t['id']} | [{t['priority']}] \"{t['title']}\""
             if t.get("due_date"):
                 line += f" (due: {t['due_date']})"
             if t.get("tags"):
                 line += f" [{', '.join(t['tags'])}]"
-            line += f"  id={t['id']}"
             parts.append(line)
 
     # In-progress tasks
@@ -71,10 +70,9 @@ def _build_context_summary_sync(max_tokens: int = 500) -> str:
     if progress_tasks:
         parts.append("\n## In Progress")
         for t in progress_tasks:
-            line = f"- [{t['priority']}] {t['title']}"
+            line = f"- id={t['id']} | [{t['priority']}] \"{t['title']}\""
             if t.get("due_date"):
                 line += f" (due: {t['due_date']})"
-            line += f"  id={t['id']}"
             parts.append(line)
 
     # Recent notes (last 5 via SQL LIMIT)
@@ -82,12 +80,11 @@ def _build_context_summary_sync(max_tokens: int = 500) -> str:
     if recent_notes:
         parts.append("\n## Recent Notes")
         for n in recent_notes:
-            line = f"- {n['title']}"
+            line = f"- id={n['id']} | \"{n['title']}\""
             if n.get("pinned"):
                 line += " [pinned]"
             if n.get("tags"):
                 line += f" [{', '.join(n['tags'])}]"
-            line += f"  id={n['id']}"
             parts.append(line)
 
     summary = "\n".join(parts)

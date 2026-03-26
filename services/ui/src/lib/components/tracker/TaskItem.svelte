@@ -4,18 +4,11 @@
 
 	let { task, subtasks = [], depth = 0 }: { task: Task; subtasks?: Task[]; depth?: number } = $props();
 
-	const priorityDot: Record<string, string> = {
-		urgent: 'bg-error',
-		high: 'bg-accent',
-		medium: 'bg-yellow-400',
-		low: 'bg-text-dim/40',
-	};
-
-	const statusIcons: Record<string, string> = {
-		todo: '○',
-		in_progress: '◑',
-		done: '●',
-		blocked: '✕',
+	const priorityColors: Record<string, string> = {
+		urgent: 'var(--color-error)',
+		high: 'var(--color-accent)',
+		medium: '#eab308',
+		low: 'var(--color-border)',
 	};
 
 	let isOverdue = $derived(
@@ -23,6 +16,7 @@
 	);
 
 	let isSelected = $derived($selectedTaskId === task.id);
+	let doneSubtasks = $derived(subtasks.filter(s => s.status === 'done').length);
 
 	async function cycleStatus() {
 		if (task.status === 'todo') {
@@ -53,59 +47,85 @@
 </script>
 
 <div
-	class="group flex items-center gap-2 px-4 py-2.5 hover:bg-bg-hover/50 transition-colors cursor-pointer
-		{isSelected ? 'bg-bg-hover/70 border-l-2 border-accent' : 'border-l-2 border-transparent'}"
-	style="padding-left: {16 + depth * 20}px"
+	class="group mx-4 my-1.5 rounded-lg border transition-all cursor-pointer
+		{isOverdue ? 'ring-1 ring-error/15' : ''}
+		{isSelected ? 'bg-bg-hover/80 border-accent/40 shadow-sm' : 'border-border/20 hover:border-border/40 hover:shadow-sm'}"
+	style="border-left: 3px solid {priorityColors[task.priority]};{depth > 0 ? ` margin-left: ${depth * 20}px` : ''}"
 	role="button"
 	tabindex="0"
 	onclick={() => selectedTaskId.set(isSelected ? null : task.id)}
 	onkeydown={(e) => e.key === 'Enter' && selectedTaskId.set(isSelected ? null : task.id)}
 >
-	<!-- Status circle -->
-	<button
-		onclick={(e) => { e.stopPropagation(); cycleStatus(); }}
-		class="shrink-0 w-5 h-5 flex items-center justify-center text-xs rounded-full transition-all hover:scale-110
-			{task.status === 'done' ? 'text-success' : task.status === 'in_progress' ? 'text-accent' : task.status === 'blocked' ? 'text-error' : 'text-text-dim'}"
-		title="Click to change status"
-	>
-		{statusIcons[task.status]}
-	</button>
+	<div class="flex items-center gap-2.5 px-3 py-2.5">
+		<!-- Status circle (SVG) -->
+		<button
+			onclick={(e) => { e.stopPropagation(); cycleStatus(); }}
+			class="shrink-0 flex items-center justify-center transition-all hover:scale-110
+				{task.status === 'done' ? 'text-success' : task.status === 'in_progress' ? 'text-accent' : task.status === 'blocked' ? 'text-error' : 'text-text-dim'}"
+			title="Click to change status"
+		>
+			<svg class="w-[18px] h-[18px]" viewBox="0 0 18 18" fill="none">
+				{#if task.status === 'todo'}
+					<circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5" />
+				{:else if task.status === 'in_progress'}
+					<circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5" />
+					<circle cx="9" cy="9" r="3.5" fill="currentColor" />
+				{:else if task.status === 'done'}
+					<circle cx="9" cy="9" r="8" fill="currentColor" />
+					<path d="M5.5 9.5L7.5 11.5L12.5 6.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+				{:else}
+					<circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5" />
+					<path d="M6.5 6.5L11.5 11.5M11.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				{/if}
+			</svg>
+		</button>
 
-	<!-- Priority dot -->
-	<div class="shrink-0 w-2 h-2 rounded-full {priorityDot[task.priority]}" title={task.priority}></div>
-
-	<!-- Title -->
-	<span class="flex-1 text-sm truncate {task.status === 'done' ? 'line-through text-text-dim' : 'text-text-primary'}">
-		{task.title}
-	</span>
-
-	<!-- Recurrence badge -->
-	{#if task.recurrence && task.recurrence !== 'none'}
-		<span class="shrink-0 text-[10px] text-text-dim" title="Recurring: {task.recurrence}">🔄</span>
-	{/if}
-
-	<!-- Tags -->
-	{#each (task.tags || []).slice(0, 2) as tag}
-		<span class="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-bg-tertiary text-text-dim">{tag}</span>
-	{/each}
-
-	<!-- Due date -->
-	{#if task.due_date}
-		<span class="shrink-0 text-[11px] {isOverdue ? 'text-error font-medium' : 'text-text-dim'}">
-			{formatDate(task.due_date)}
+		<!-- Title -->
+		<span class="flex-1 text-sm truncate {task.status === 'done' ? 'line-through text-text-dim' : 'text-text-primary'}">
+			{task.title}
 		</span>
-	{/if}
 
-	<!-- Delete (on hover) -->
-	<button
-		onclick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-		class="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-text-dim hover:text-error transition-all p-0.5"
-		title="Delete"
-	>
-		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-		</svg>
-	</button>
+		<!-- Subtask progress -->
+		{#if subtasks.length > 0}
+			<span class="shrink-0 text-[11px] text-text-dim flex items-center gap-0.5">
+				{doneSubtasks}/{subtasks.length}
+				<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</span>
+		{/if}
+
+		<!-- Recurrence badge -->
+		{#if task.recurrence && task.recurrence !== 'none'}
+			<span class="shrink-0 px-1.5 py-0.5 text-[10px] rounded-full bg-accent/[0.08] text-accent/60">
+				{task.recurrence}
+			</span>
+		{/if}
+
+		<!-- Tags -->
+		{#each (task.tags || []).slice(0, 2) as tag}
+			<span class="shrink-0 px-1.5 py-0.5 text-[10px] rounded-full bg-bg-tertiary text-text-dim">{tag}</span>
+		{/each}
+
+		<!-- Due date pill -->
+		{#if task.due_date}
+			<span class="shrink-0 px-2 py-0.5 text-[11px] rounded-full
+				{isOverdue ? 'bg-error/10 text-error font-medium' : 'bg-bg-tertiary/50 text-text-dim'}">
+				{formatDate(task.due_date)}
+			</span>
+		{/if}
+
+		<!-- Delete (on hover) -->
+		<button
+			onclick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+			class="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-text-dim hover:text-error transition-all p-0.5"
+			title="Delete"
+		>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+			</svg>
+		</button>
+	</div>
 </div>
 
 <!-- Subtasks -->
