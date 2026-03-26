@@ -4,30 +4,21 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import ChatArea from '$lib/components/ChatArea.svelte';
 	import ChatInput from '$lib/components/ChatInput.svelte';
-	import Settings from '$lib/components/Settings.svelte';
 	import VoiceStudio from '$lib/components/VoiceStudio.svelte';
 	import MemoryManager from '$lib/components/MemoryManager.svelte';
 	import CodePlayground from '$lib/components/CodePlayground.svelte';
 	import { connect, disconnect } from '$lib/ws/client';
 	import { loadConversations, newConversation, generating } from '$lib/stores/chat';
-	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, settingsOpen, memoryManagerOpen, codePlaygroundOpen, focusTrigger } from '$lib/stores/settings';
+	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, memoryManagerOpen, codePlaygroundOpen, focusTrigger } from '$lib/stores/settings';
 	import { theme } from '$lib/stores/theme';
+	import ConsoleButtons from '$lib/components/ConsoleButtons.svelte';
 
 	let showHttpBanner = $state(false);
 
-	function handleGlobalKeydown(e: KeyboardEvent) {
+	function handleChatKeydown(e: KeyboardEvent) {
 		const mod = e.ctrlKey || e.metaKey;
 		const tag = (e.target as HTMLElement)?.tagName;
 		const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-
-		// Escape: close any open modal (always works)
-		if (e.key === 'Escape') {
-			if ($settingsOpen) { settingsOpen.set(false); e.preventDefault(); return; }
-			if ($voiceStudioOpen) { voiceStudioOpen.set(false); e.preventDefault(); return; }
-			if ($memoryManagerOpen) { memoryManagerOpen.set(false); e.preventDefault(); return; }
-			if ($codePlaygroundOpen) { codePlaygroundOpen.set(false); e.preventDefault(); return; }
-			return;
-		}
 
 		// Ctrl+/ — focus chat input (works from anywhere)
 		if (mod && e.key === '/') {
@@ -51,20 +42,10 @@
 		}
 	}
 
-	// Apply theme to <html> element reactively
-	$effect(() => {
-		const t = $theme;
-		if (t === 'default') {
-			delete document.documentElement.dataset.theme;
-		} else {
-			document.documentElement.dataset.theme = t;
-		}
-	});
-
 	onMount(() => {
 		connect();
 		loadConversations();
-		document.addEventListener('keydown', handleGlobalKeydown);
+		document.addEventListener('keydown', handleChatKeydown);
 		if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
 			showHttpBanner = true;
 		}
@@ -72,7 +53,7 @@
 
 	onDestroy(() => {
 		disconnect();
-		document.removeEventListener('keydown', handleGlobalKeydown);
+		document.removeEventListener('keydown', handleChatKeydown);
 	});
 </script>
 
@@ -80,8 +61,9 @@
 	<title>Gizmo-AI</title>
 </svelte:head>
 
-<div class="console-frame flex flex-col h-screen bg-bg-primary">
+<div class="console-frame flex flex-col flex-1 overflow-hidden">
 	{#if $theme !== 'default'}<div class="cd" aria-hidden="true"><span></span><span></span><span></span><span></span></div>{/if}
+	<ConsoleButtons />
 	{#if showHttpBanner}
 		<div class="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-400 flex items-center justify-between">
 			<span>Mic & voice features require HTTPS. Access Gizmo via Tailscale HTTPS or localhost for full access.</span>
@@ -100,7 +82,6 @@
 	</div>
 </div>
 
-<Settings />
 <VoiceStudio bind:open={$voiceStudioOpen} />
 <MemoryManager />
 <CodePlayground />

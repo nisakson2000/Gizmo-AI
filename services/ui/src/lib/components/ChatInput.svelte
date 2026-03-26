@@ -4,6 +4,7 @@
 	import { connectionStatus } from '$lib/stores/connection';
 	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen, focusTrigger } from '$lib/stores/settings';
 	import { toast } from '$lib/stores/toast';
+	import { playSelect, playCancel } from '$lib/utils/sounds';
 
 	let input = $state('');
 	let recording = $state(false);
@@ -48,6 +49,7 @@
 		const text = input.trim();
 		if (!text && !pendingImage && !pendingFile && !pendingVideo) return;
 		if (uploading) return;
+		playSelect();
 		const generatingHere = $generating && $generatingConversationId === $activeConversationId;
 		if (generatingHere) {
 			showError('Still generating — wait or click stop.');

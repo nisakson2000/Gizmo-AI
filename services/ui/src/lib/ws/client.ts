@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import { playConfirm, playError } from '$lib/utils/sounds';
 import {
 	generating,
 	streamingThinking,
@@ -116,6 +117,7 @@ function handleEvent(data: any) {
 			return; // done event will handle conversation_id and cleanup
 		}
 		case 'done': {
+			playConfirm();
 			// Always set conversation ID if user is still on this conversation
 			if (data.conversation_id) {
 				const curId = get(activeConversationId);
@@ -144,6 +146,7 @@ function handleEvent(data: any) {
 			}
 			break;
 		case 'error':
+			playError();
 			generating.set(false);
 			connectionStatus.set('connected');
 			streamingContent.update((c) => c + `\n\n**Error:** ${data.error}`);
