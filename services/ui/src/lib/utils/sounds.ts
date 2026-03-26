@@ -281,8 +281,9 @@ export function playCancel(): void { playSound('cancel'); }
 export function playError(): void { playSound('error'); }
 export function playNavigate(): void { playSound('navigate'); }
 
-// Boot sound always plays (part of boot experience), but respects default theme
+// Boot sound respects soundsEnabled and default theme
 export function playBootSound(): void {
+	if (!get(soundsEnabled)) return;
 	const t = get(theme);
 	if (t === 'default') return;
 	const sounds = consoleSounds[t];

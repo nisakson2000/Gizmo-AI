@@ -101,6 +101,7 @@
 								class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors {$soundsEnabled ? 'bg-accent' : 'bg-bg-tertiary'}"
 								role="switch"
 								aria-checked={$soundsEnabled}
+								aria-label="Toggle console sounds"
 							>
 								<span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform {$soundsEnabled ? 'translate-x-4' : 'translate-x-0.5'}"></span>
 							</button>

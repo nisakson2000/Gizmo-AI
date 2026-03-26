@@ -332,8 +332,9 @@ async def execute_tracker_tool(name: str, arguments: dict[str, Any]) -> str:
         return f"Task created:\n{_format_task(task)}"
 
     elif name == "update_task":
-        task_id = arguments.pop("task_id")
-        task = update_task(task_id, **arguments)
+        task_id = arguments.get("task_id")
+        fields = {k: v for k, v in arguments.items() if k != "task_id"}
+        task = update_task(task_id, **fields)
         if not task:
             return f"Task '{task_id}' not found."
         return f"Task updated:\n{_format_task(task)}"
@@ -377,8 +378,9 @@ async def execute_tracker_tool(name: str, arguments: dict[str, Any]) -> str:
         return f"Note created:\n{_format_note(note)}"
 
     elif name == "update_note":
-        note_id = arguments.pop("note_id")
-        note = update_note(note_id, **arguments)
+        note_id = arguments.get("note_id")
+        fields = {k: v for k, v in arguments.items() if k != "note_id"}
+        note = update_note(note_id, **fields)
         if not note:
             return f"Note '{note_id}' not found."
         return f"Note updated:\n{_format_note(note)}"

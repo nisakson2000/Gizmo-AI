@@ -3,8 +3,7 @@
    Each [data-theme="X"] selector overrides the :root / @theme defaults.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ─── Google Fonts ──────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Fredoka:wght@400;500;600&family=Nunito:wght@400;500;600;700&display=swap');
+/* ─── Fonts: self-hosted in static/fonts/ (no CDN dependency) ──────── */
 
 
 /* ═══════════════════════════════════════════════════════════════════════

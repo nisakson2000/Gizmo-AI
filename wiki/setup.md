@@ -17,7 +17,7 @@ You are about to set up a stack of 6 containerized services that work together t
 ## Hardware Requirements
 
 ### GPU (Most Important)
-You need an **NVIDIA GPU with 16GB+ VRAM**. The LLM weights (Q8_0 quantization) are ~9.5GB and Qwen3-TTS adds ~4GB when active — total peak ~16.8GB. The RTX 4090 (24GB) is the tested configuration with comfortable headroom. Whisper runs on CPU and does not consume VRAM.
+You need an **NVIDIA GPU with 20GB+ VRAM**. The LLM weights (Q8_0 quantization) are ~9.5GB plus ~6.2GB for the Q8_0 KV cache at 32K context. Qwen3-TTS adds ~4GB when active — total peak ~20.7GB. The RTX 4090 (24GB) is the tested configuration with ~3.3GB headroom. Whisper runs on CPU and does not consume VRAM.
 
 If you have less VRAM:
 - 16GB VRAM → use Q8_0 (fits with TTS, tight but works)

@@ -6,7 +6,7 @@
 	import IconRail from '$lib/components/IconRail.svelte';
 	import BootSequence from '$lib/components/BootSequence.svelte';
 	import { theme } from '$lib/stores/theme';
-	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, codePlaygroundOpen } from '$lib/stores/settings';
+	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, codePlaygroundOpen, sidebarOpen } from '$lib/stores/settings';
 
 	let { children } = $props();
 
@@ -26,6 +26,7 @@
 			if ($voiceStudioOpen) { voiceStudioOpen.set(false); e.preventDefault(); return; }
 			if ($memoryManagerOpen) { memoryManagerOpen.set(false); e.preventDefault(); return; }
 			if ($codePlaygroundOpen) { codePlaygroundOpen.set(false); e.preventDefault(); return; }
+			if ($sidebarOpen) { sidebarOpen.set(false); e.preventDefault(); return; }
 		}
 	}
 </script>

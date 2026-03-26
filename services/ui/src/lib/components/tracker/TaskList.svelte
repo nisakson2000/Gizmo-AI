@@ -54,6 +54,7 @@
 	</div>
 	<div class="flex-1"></div>
 	<select
+		value={$taskFilter.sort}
 		onchange={(e) => taskFilter.update(f => ({ ...f, sort: (e.target as HTMLSelectElement).value }))}
 		class="text-[11px] bg-bg-tertiary/50 text-text-dim rounded px-2 py-1 border-none outline-none cursor-pointer"
 	>

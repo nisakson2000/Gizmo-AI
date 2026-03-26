@@ -1,11 +1,13 @@
 """Gizmo-AI Tracker module — task/note management REST API + embedded AI chat."""
 
+import asyncio
 import json
 import logging
+import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from llm import stream_chat
@@ -23,28 +25,36 @@ TRACKER_PROMPT_PATH = Path("/app/config/tracker-prompt.txt")
 
 router = APIRouter()
 
-
 # --- Helpers ---
+
+_prompt_cache: str | None = None
+_prompt_mtime: float = 0.0
 
 
 def _load_tracker_prompt() -> str:
-    """Load the tracker system prompt, stripping comment lines."""
+    """Load the tracker system prompt, stripping comment lines. Cached with mtime check."""
+    global _prompt_cache, _prompt_mtime
     if not TRACKER_PROMPT_PATH.exists():
         return "You are a task and note tracker assistant."
+    mtime = os.path.getmtime(TRACKER_PROMPT_PATH)
+    if _prompt_cache is not None and mtime == _prompt_mtime:
+        return _prompt_cache
     lines = TRACKER_PROMPT_PATH.read_text().splitlines()
-    return "\n".join(line for line in lines if not line.startswith("#")).strip()
+    _prompt_cache = "\n".join(line for line in lines if not line.startswith("#")).strip()
+    _prompt_mtime = mtime
+    return _prompt_cache
 
 
-def _build_context_summary(max_tokens: int = 500) -> str:
+def _build_context_summary_sync(max_tokens: int = 500) -> str:
     """Build a compact summary of open tasks and recent notes for injection.
 
     Aims for roughly max_tokens worth of text (~4 chars/token heuristic).
     """
     char_budget = max_tokens * 4
-    parts = []
+    parts: list[str] = []
 
     # Open tasks
-    open_tasks = list_tasks(status="open")
+    open_tasks = list_tasks(status="todo")
     if open_tasks:
         parts.append("## Open Tasks")
         for t in open_tasks:
@@ -67,11 +77,11 @@ def _build_context_summary(max_tokens: int = 500) -> str:
             line += f"  id={t['id']}"
             parts.append(line)
 
-    # Recent notes (last 5)
-    recent_notes = list_notes()
+    # Recent notes (last 5 via SQL LIMIT)
+    recent_notes = list_notes(limit=5)
     if recent_notes:
         parts.append("\n## Recent Notes")
-        for n in recent_notes[:5]:
+        for n in recent_notes:
             line = f"- {n['title']}"
             if n.get("pinned"):
                 line += " [pinned]"
@@ -82,8 +92,15 @@ def _build_context_summary(max_tokens: int = 500) -> str:
 
     summary = "\n".join(parts)
     if len(summary) > char_budget:
-        summary = summary[:char_budget] + "\n..."
+        # Truncate at line boundary
+        truncated = summary[:char_budget].rsplit("\n", 1)[0]
+        summary = truncated + "\n..."
     return summary
+
+
+async def _build_context_summary(max_tokens: int = 500) -> str:
+    """Async wrapper — runs sync DB queries in a thread to avoid blocking the event loop."""
+    return await asyncio.to_thread(_build_context_summary_sync, max_tokens)
 
 
 # --- REST: Tasks ---
@@ -106,9 +123,10 @@ async def api_list_tasks(
 
 
 @router.post("/api/tracker/tasks")
-async def api_create_task(request_body: dict):
+async def api_create_task(request: Request):
     """Create a new task."""
     try:
+        request_body = await request.json()
         task = create_task(**request_body)
         return {"task": task}
     except Exception as e:
@@ -130,9 +148,10 @@ async def api_get_task(task_id: str):
 
 
 @router.patch("/api/tracker/tasks/{task_id}")
-async def api_update_task(task_id: str, request_body: dict):
+async def api_update_task(task_id: str, request: Request):
     """Update a task."""
     try:
+        request_body = await request.json()
         task = update_task(task_id, **request_body)
         if not task:
             return JSONResponse(status_code=404, content={"error": "Task not found"})
@@ -187,9 +206,10 @@ async def api_list_notes(
 
 
 @router.post("/api/tracker/notes")
-async def api_create_note(request_body: dict):
+async def api_create_note(request: Request):
     """Create a new note."""
     try:
+        request_body = await request.json()
         note = create_note(**request_body)
         return {"note": note}
     except Exception as e:
@@ -211,9 +231,10 @@ async def api_get_note(note_id: str):
 
 
 @router.patch("/api/tracker/notes/{note_id}")
-async def api_update_note(note_id: str, request_body: dict):
+async def api_update_note(note_id: str, request: Request):
     """Update a note."""
     try:
+        request_body = await request.json()
         note = update_note(note_id, **request_body)
         if not note:
             return JSONResponse(status_code=404, content={"error": "Note not found"})
@@ -280,7 +301,7 @@ async def ws_tracker(ws: WebSocket):
 
             # Build system prompt with context
             system_prompt = _load_tracker_prompt()
-            context_summary = _build_context_summary()
+            context_summary = await _build_context_summary()
             if context_summary:
                 system_prompt += f"\n\n--- Current Tracker State ---\n{context_summary}"
 
@@ -295,6 +316,7 @@ async def ws_tracker(ws: WebSocket):
             tool_calls_pending = []
             max_tool_rounds = 5
             tool_round = 0
+            stream_errored = False
 
             async for event in stream_chat(messages, tools=TRACKER_TOOL_DEFINITIONS):
                 if event["type"] == "token":
@@ -310,6 +332,7 @@ async def ws_tracker(ws: WebSocket):
                         "status": "running",
                     })
                 elif event["type"] == "error":
+                    stream_errored = True
                     logger.error("[%s] Stream error: %s", trace_id, event["error"])
                     await ws.send_json({
                         "type": "error",
@@ -382,6 +405,7 @@ async def ws_tracker(ws: WebSocket):
                             "status": "running",
                         })
                     elif event["type"] == "error":
+                        stream_errored = True
                         logger.error(
                             "[%s] Stream error (tool round %d): %s",
                             trace_id, tool_round, event["error"],
@@ -394,8 +418,8 @@ async def ws_tracker(ws: WebSocket):
                         tool_calls_pending = []  # Stop looping on error
                         break
 
-            # Persist assistant response in session history
-            if full_response:
+            # Persist assistant response in session history (skip on error to avoid corruption)
+            if full_response and not stream_errored:
                 message_history.append({"role": "assistant", "content": full_response})
                 conv_log.info("[%s] TRACKER ASSISTANT: %s", trace_id, full_response[:500])
 

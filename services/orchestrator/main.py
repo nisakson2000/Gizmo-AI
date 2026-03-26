@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 
-from llm import stream_chat as _llm_stream_chat, LLAMA_URL
+from llm import stream_chat as _llm_stream_chat
 from memory import get_relevant_memories, list_memories, write_memory, read_memory, delete_memory
 from search import web_search
 from tools import TOOL_DEFINITIONS, execute_tool

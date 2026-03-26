@@ -11,20 +11,13 @@
 	}
 
 	function replayBoot() {
-		const t = $theme;
-		if (typeof sessionStorage !== 'undefined') {
-			sessionStorage.removeItem(`gizmo:booted:${t}`);
-		}
-		// Force re-trigger by toggling theme
-		const current = $theme;
-		theme.set('default');
-		requestAnimationFrame(() => theme.set(current));
+		// Signal BootSequence to replay via custom event (avoids fragile theme toggle)
+		document.dispatchEvent(new CustomEvent('gizmo:replay-boot'));
 	}
 
 	function openFilePicker() {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.click();
+		// Dispatch event that ChatInput listens for to trigger its file upload
+		document.dispatchEvent(new CustomEvent('gizmo:upload'));
 	}
 
 	let buttons = $derived.by((): ConsoleBtn[] => {

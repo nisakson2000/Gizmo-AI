@@ -21,10 +21,13 @@
 		}
 	}
 
+	let fadeTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	function dismiss() {
 		if (skipTimeout) { clearTimeout(skipTimeout); skipTimeout = null; }
 		animating = false;
-		setTimeout(() => { visible = false; }, 300); // fade-out duration
+		if (fadeTimeout) clearTimeout(fadeTimeout);
+		fadeTimeout = setTimeout(() => { visible = false; }, 300); // fade-out duration
 	}
 
 	function triggerBoot(t: string) {
@@ -60,6 +63,21 @@
 			// Small delay on initial load to let the DOM settle
 			setTimeout(() => triggerBoot(t), 100);
 		}
+	});
+
+	// Listen for replay-boot signal from ConsoleButtons
+	$effect(() => {
+		const handler = () => replayBoot();
+		document.addEventListener('gizmo:replay-boot', handler);
+		return () => document.removeEventListener('gizmo:replay-boot', handler);
+	});
+
+	// Cleanup all timers on component teardown
+	$effect(() => {
+		return () => {
+			if (skipTimeout) clearTimeout(skipTimeout);
+			if (fadeTimeout) clearTimeout(fadeTimeout);
+		};
 	});
 </script>
 

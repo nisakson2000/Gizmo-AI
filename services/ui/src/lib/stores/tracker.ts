@@ -1,10 +1,14 @@
 import { writable, get } from 'svelte/store';
+import { toast } from '$lib/stores/toast';
 
 // ── Persisted writable (same pattern as settings.ts) ──────────────────
 
 function persistedWritable<T>(key: string, defaultValue: T) {
 	const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
-	const initial = stored !== null ? JSON.parse(stored) : defaultValue;
+	let initial = defaultValue;
+	if (stored !== null) {
+		try { initial = JSON.parse(stored); } catch { /* corrupt localStorage, use default */ }
+	}
 	const store = writable<T>(initial);
 	if (typeof localStorage !== 'undefined') {
 		store.subscribe((value) => localStorage.setItem(key, JSON.stringify(value)));
@@ -81,7 +85,7 @@ export async function loadTasks(filters?: Partial<TaskFilter>) {
 			tasks.set(data.tasks || []);
 		}
 	} catch {
-		// Service unavailable
+		toast('Failed to load tasks', 'error');
 	}
 }
 
@@ -97,7 +101,7 @@ export async function createTask(data: Partial<Task>) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -113,7 +117,7 @@ export async function updateTask(id: string, data: Partial<Task>) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -126,7 +130,7 @@ export async function completeTask(id: string) {
 			await loadTasks();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -143,7 +147,7 @@ export async function deleteTask(id: string) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -161,7 +165,7 @@ export async function loadNotes(filters?: { search?: string; pinned?: boolean })
 			notes.set(data.notes || []);
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -177,7 +181,7 @@ export async function createNote(data: Partial<Note>) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -193,7 +197,7 @@ export async function updateNote(id: string, data: Partial<Note>) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -210,7 +214,7 @@ export async function deleteNote(id: string) {
 			await loadTags();
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }
 
@@ -224,6 +228,6 @@ export async function loadTags() {
 			allTags.set(data.tags || []);
 		}
 	} catch {
-		// Service unavailable
+		toast('Tracker service unavailable', 'error');
 	}
 }

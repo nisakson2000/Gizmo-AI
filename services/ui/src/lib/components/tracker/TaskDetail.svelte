@@ -17,9 +17,12 @@
 
 	let subtasks = $derived($tasks.filter((t) => t.parent_id === $selectedTaskId));
 
-	// Sync local state when task changes
+	// Sync local state only when selected task ID changes (not on every store update)
+	let lastSyncedId = $state('');
 	$effect(() => {
-		if (task) {
+		const id = $selectedTaskId;
+		if (id && id !== lastSyncedId && task) {
+			lastSyncedId = id;
 			title = task.title;
 			description = task.description;
 			status = task.status;

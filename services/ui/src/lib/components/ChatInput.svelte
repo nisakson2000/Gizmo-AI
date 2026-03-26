@@ -4,7 +4,7 @@
 	import { connectionStatus } from '$lib/stores/connection';
 	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen, focusTrigger } from '$lib/stores/settings';
 	import { toast } from '$lib/stores/toast';
-	import { playSelect, playCancel } from '$lib/utils/sounds';
+	import { playSelect } from '$lib/utils/sounds';
 
 	let input = $state('');
 	let recording = $state(false);
@@ -39,6 +39,13 @@
 	$effect(() => {
 		$focusTrigger;
 		if ($focusTrigger > 0 && textarea) textarea.focus();
+	});
+
+	// Listen for upload trigger from ConsoleButtons
+	$effect(() => {
+		const handler = () => handleFileUpload();
+		document.addEventListener('gizmo:upload', handler);
+		return () => document.removeEventListener('gizmo:upload', handler);
 	});
 
 	const MAX_DOC_SIZE = 50 * 1024 * 1024;

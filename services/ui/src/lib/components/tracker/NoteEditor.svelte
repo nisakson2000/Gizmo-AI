@@ -11,9 +11,12 @@
 	let pinned = $state(false);
 	let confirmDelete = $state(false);
 
-	// Sync local state when note changes
+	// Sync local state only when selected note ID changes (not on every store update)
+	let lastSyncedId = $state('');
 	$effect(() => {
-		if (note) {
+		const id = $selectedNoteId;
+		if (id && id !== lastSyncedId && note) {
+			lastSyncedId = id;
 			title = note.title;
 			content = note.content;
 			tagsText = note.tags.join(', ');

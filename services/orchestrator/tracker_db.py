@@ -21,7 +21,7 @@ def _get_conn():
 
 
 def _new_id() -> str:
-    return uuid.uuid4().hex[:8]
+    return uuid.uuid4().hex[:12]
 
 
 def _now_iso() -> str:
@@ -147,26 +147,33 @@ def complete_task(task_id: str) -> dict | None:
             "UPDATE tasks SET status = 'done', completed_at = ?, updated_at = ? WHERE id = ?",
             (now, now, task_id),
         )
-        conn.commit()
-        completed = _task_to_dict(conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone())
 
-        result = {"completed": completed}
-
-        # Handle recurrence
+        # Handle recurrence — create next occurrence before committing
+        next_id = None
         recurrence = row["recurrence"]
         if recurrence and recurrence != "none" and row["due_date"]:
             next_due = _calc_next_due(row["due_date"], recurrence)
             if next_due:
-                next_task = create_task(
-                    title=row["title"],
-                    description=row["description"],
-                    priority=row["priority"],
-                    due_date=next_due,
-                    tags=json.loads(row["tags"]),
-                    parent_id=row["parent_id"],
-                    recurrence=recurrence,
+                next_id = _new_id()
+                next_now = _now_iso()
+                tags_json = row["tags"]
+                conn.execute(
+                    """INSERT INTO tasks (id, title, description, status, priority, due_date,
+                       tags, parent_id, recurrence, created_at, updated_at)
+                       VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, ?, ?, ?)""",
+                    (next_id, row["title"], row["description"], row["priority"],
+                     next_due, tags_json, row["parent_id"], recurrence, next_now, next_now),
                 )
-                result["next"] = next_task
+
+        # Single atomic commit for both UPDATE + INSERT
+        conn.commit()
+
+        completed = _task_to_dict(conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone())
+        result: dict = {"completed": completed}
+        if next_id:
+            result["next"] = _task_to_dict(
+                conn.execute("SELECT * FROM tasks WHERE id = ?", (next_id,)).fetchone()
+            )
 
         return result
     finally:
@@ -174,14 +181,23 @@ def complete_task(task_id: str) -> dict | None:
 
 
 def delete_task(task_id: str) -> bool:
-    """Delete a task and its subtasks. Returns True if the task existed."""
+    """Delete a task and all descendant subtasks recursively. Returns True if the task existed."""
     conn = _get_conn()
     try:
         existing = conn.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not existing:
             return False
-        # Delete subtasks first
-        conn.execute("DELETE FROM tasks WHERE parent_id = ?", (task_id,))
+        # Recursive CTE to find all descendants
+        conn.execute("""
+            DELETE FROM tasks WHERE id IN (
+                WITH RECURSIVE descendants(id) AS (
+                    SELECT id FROM tasks WHERE parent_id = ?
+                    UNION ALL
+                    SELECT t.id FROM tasks t JOIN descendants d ON t.parent_id = d.id
+                )
+                SELECT id FROM descendants
+            )
+        """, (task_id,))
         conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
         conn.commit()
         return True
@@ -214,9 +230,8 @@ def list_tasks(
         elif not include_subtasks:
             query += " AND parent_id IS NULL"
         if tag:
-            # JSON array search: tags column contains the tag string
-            query += " AND tags LIKE ?"
-            params.append(f"%{json.dumps(tag)[1:-1]}%")
+            query += " AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)"
+            params.append(tag)
 
         query += " ORDER BY CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 END, created_at DESC"
 
@@ -320,6 +335,7 @@ def list_notes(
     tag: str | None = None,
     search: str | None = None,
     pinned_only: bool = False,
+    limit: int | None = None,
 ) -> list[dict]:
     """List notes with optional filters."""
     conn = _get_conn()
@@ -330,13 +346,15 @@ def list_notes(
         if pinned_only:
             query += " AND pinned = 1"
         if tag:
-            query += " AND tags LIKE ?"
-            params.append(f"%{json.dumps(tag)[1:-1]}%")
+            query += " AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)"
+            params.append(tag)
         if search:
             query += " AND (title LIKE ? OR content LIKE ?)"
             params.extend([f"%{search}%", f"%{search}%"])
 
         query += " ORDER BY pinned DESC, updated_at DESC"
+        if limit:
+            query += f" LIMIT {int(limit)}"
 
         rows = conn.execute(query, params).fetchall()
         return [_note_to_dict(r) for r in rows]

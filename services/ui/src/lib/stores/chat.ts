@@ -165,7 +165,11 @@ export async function loadConversation(id: string) {
 					audioUrl: m.audio_url || undefined,
 					imageUrl: m.image_url || undefined,
 					videoUrl: m.video_url || undefined,
+					videoFrames: m.video_frames ? JSON.parse(m.video_frames) : undefined,
 					toolCalls: m.tool_calls ? JSON.parse(m.tool_calls) : undefined,
+					ttsInfo: m.tts_info || undefined,
+					variants: m.variants ? JSON.parse(m.variants) : undefined,
+					variantIndex: m.variant_index ?? undefined,
 				}))
 			);
 		}

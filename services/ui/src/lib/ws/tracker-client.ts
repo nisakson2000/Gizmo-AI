@@ -41,6 +41,7 @@ function getWsUrl(): string {
 }
 
 export function connectTracker() {
+	if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
 	if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
 		return;
 	}
@@ -109,14 +110,14 @@ function handleEvent(data: any) {
 				}
 				return tc;
 			});
-			// Auto-refresh task/note lists when tools complete
-			loadTasks();
-			loadNotes();
 			break;
 		}
 		case 'done':
 			finalizeTrackerMessage();
 			trackerGenerating.set(false);
+			// Refresh task/note lists once after all tool calls complete
+			loadTasks();
+			loadNotes();
 			break;
 		case 'error':
 			trackerStreamingContent.update((c) => c + `\n\n**Error:** ${data.error}`);
@@ -170,7 +171,15 @@ export function sendTrackerMessage(message: string, thinking: boolean = false) {
 }
 
 export function disconnectTracker() {
-	if (reconnectTimeout) clearTimeout(reconnectTimeout);
+	if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
+	reconnectDelay = 1000;
+	// Clear any in-flight streaming state
+	const content = get(trackerStreamingContent);
+	const thinking = get(trackerStreamingThinking);
+	if (content || thinking) {
+		finalizeTrackerMessage();
+	}
+	trackerGenerating.set(false);
 	if (ws) ws.close();
 	ws = null;
 }
