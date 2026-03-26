@@ -49,8 +49,13 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Code Playground** — dedicated modal for writing and running Python, or sending code to Gizmo for analysis
 - **Memory Manager** — browse, add, and delete memories from the UI
 
+### Productivity
+- **Task Tracker** — built-in task and note management with tags, priorities, due dates, recurrence, and subtasks; LLM-powered natural language task creation via dedicated `/tracker` route
+- **Code Playground** — write and run Python in a sandboxed container, copy output, or send code to Gizmo for analysis
+
 ### UI & System
-- **Nintendo console themes** — 10 themes including NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, and Switch with physical console frames, buttons, and branded labels
+- **Nintendo console themes** — 9 themes (NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, Switch) with physical console frames, per-console sound effects, screen technology overlays (CRT vignette, LCD dot matrix, fog, neon bleed), era-specific message styling, and animated boot sequences
+- **Icon rail navigation** — labeled sidebar with Chat, Tasks, and Settings
 - **Toast notifications** — non-intrusive feedback for copy, export, and error events
 - **Service health dashboard** — live status monitoring for all backend services
 - **Customizable persona** — XML-tagged constitution file (`config/constitution.txt`) with tool decision framework and abliteration-aware precision rules

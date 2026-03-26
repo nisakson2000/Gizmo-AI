@@ -56,6 +56,7 @@ Full technical reference for Gizmo-AI. Assumes familiarity with containers and R
 - `./logs:/app/logs:rw` — Runtime logs (orchestrator)
 - `./voices:/app/voices:rw` — Saved voice profiles (orchestrator)
 - `./media:/app/media:rw` — Uploaded video files (orchestrator)
+- `./tracker:/app/tracker:rw` — Tracker tasks and notes database (orchestrator)
 - `./services/searxng/config:/etc/searxng:rw` — SearXNG config
 - `./models/whisper-cache:/root/.cache/huggingface:Z` — Whisper model cache
 
@@ -160,6 +161,19 @@ Supports up to 5 rounds of automatic tool calling per request.
 | `/api/voices` | GET | List saved voice profiles |
 | `/api/voices` | POST | Upload and save a voice profile (FormData: file, name, max_duration) |
 | `/api/voices/{id}` | DELETE | Delete a saved voice profile |
+| `/api/tracker/tasks` | GET | List tasks (query: `?status=`, `?tag=`, `?priority=`) |
+| `/api/tracker/tasks` | POST | Create task (JSON: title, description, priority, tags, due_date, recurrence) |
+| `/api/tracker/tasks/{id}` | GET | Get single task |
+| `/api/tracker/tasks/{id}` | PATCH | Update task fields |
+| `/api/tracker/tasks/{id}/complete` | PATCH | Toggle task completion |
+| `/api/tracker/tasks/{id}` | DELETE | Delete task |
+| `/api/tracker/notes` | GET | List notes (query: `?tag=`) |
+| `/api/tracker/notes` | POST | Create note (JSON: title, content, tags) |
+| `/api/tracker/notes/{id}` | GET | Get single note |
+| `/api/tracker/notes/{id}` | PATCH | Update note |
+| `/api/tracker/notes/{id}` | DELETE | Delete note |
+| `/api/tracker/tags` | GET | List all tags across tasks and notes |
+| `ws://…/ws/tracker` | WS | Tracker LLM chat for natural language task creation |
 | `/api/voices/{id}/preview` | POST | Synthesize a short preview with a saved voice (JSON: `text`) |
 | `/api/media/{filename}` | GET | Serve uploaded video/media files |
 | `/api/logs/{log_name}` | GET | Tail log file (`?lines=100`, max 1000) |

@@ -205,6 +205,24 @@ Every code change, feature addition, or configuration update MUST include corres
 - Triggered by image_data or video_frames in request
 - Keeps constitution.txt clean from detailed vision instructions
 
+## Tracker Module
+- SQLite database at /app/tracker/tracker.db (tasks + notes tables)
+- REST: CRUD for tasks and notes under /api/tracker/
+- Tasks: title, description, status, priority, tags, due_date, recurrence, subtasks
+- Notes: title, content, tags
+- LLM chat via /ws/tracker WebSocket — natural language task creation
+- Tracker prompt: config/tracker-prompt.txt
+- Backend: tracker.py (FastAPI router), tracker_db.py (SQLite), tracker_tools.py (LLM tools), llm.py (LLM helper)
+- Frontend: /tracker route, 9 Svelte components, dedicated store and WS client
+- Icon rail navigation: Chat, Tasks, Settings in left sidebar
+
+## Enhanced Console Themes
+- Per-console sound system: 9 unique sonic identities (NES harsh square, SNES warm echo, GBA tinny, N64 bassy pitch-bend, GameCube crystalline, Wii bubbly, Switch tactile, DS cute, 3DS refined delay)
+- Screen technology overlays: CRT vignette (NES), phosphor glow (SNES), LCD dot matrix (GBA), distance fog (N64), indigo glow (GameCube), horizontal stripes (Wii), neon bleed (Switch), touch crosshair (DS), stereoscopic parallax (3DS)
+- Per-console message bubble styling, input area theming, sidebar hover effects
+- Enhanced boot sequences with sound integration (static, stars, 3D cubes, ring ripples, etc.)
+- CSS targeting uses data-role attribute on msg-appear (Lightning CSS strips :has() selectors)
+
 ## Future Roadmap
 - Image generation (Stable Diffusion integration)
 - RAG pipeline (document ingestion + vector search)
@@ -222,3 +240,4 @@ Every code change, feature addition, or configuration update MUST include corres
 - [2026-03-14] V3 upgrade — Voice Studio, video/audio analysis, Whisper STT, vision enabled, server-side conversations, Tailscale HTTPS, constitution split, all docs updated
 - [2026-03-14] V4 upgrade — BM25 memory, Memory Manager UI, code execution sandbox, Code Playground, vision prompt injection, per-token timeout, audio suggestion card, TTS voice selection, tool discipline, all docs updated
 - [2026-03-23] V5 upgrade — Toast notifications, keyboard shortcuts, conversation rename/export/search, streaming perf, response history, regenerate/edit, conversation pruning, Nintendo theme system (9 console themes), stack audit (KV cache quantization, constitution rewrite with XML tags, multi-round WS tool loop, tool schema tightening)
+- [2026-03-25] V5.1 — Enhanced console themes (per-console sounds, screen effects, message styling, boot animations), Tracker module (tasks + notes + LLM chat), icon rail navigation, copy buttons on code output, Code Playground state reset, input padding fix, constitution code block softening
