@@ -2,7 +2,7 @@
 	import { thinkingEnabled, ttsEnabled, contextLength, settingsOpen, voiceStudioOpen, memoryManagerOpen, ttsVoiceId } from '$lib/stores/settings';
 	import { theme, themeOptions } from '$lib/stores/theme';
 	import type { ThemeName } from '$lib/stores/theme';
-	import { soundsEnabled } from '$lib/stores/sounds';
+	import { soundsEnabled, bootAnimationsEnabled } from '$lib/stores/sounds';
 
 	interface ServiceHealth {
 		[key: string]: { status: string; error?: string };
@@ -90,7 +90,7 @@
 				<!-- ═══ Console Sounds ═══ -->
 				{#if $theme !== 'default'}
 				<div>
-					<div class="bg-bg-tertiary/30 border border-border/30 rounded-xl p-4">
+					<div class="bg-bg-tertiary/30 border border-border/30 rounded-xl p-4 space-y-4">
 						<div class="flex items-center justify-between">
 							<div class="flex-1 mr-4">
 								<p class="text-sm font-medium">Console Sounds</p>
@@ -104,6 +104,21 @@
 								aria-label="Toggle console sounds"
 							>
 								<span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform {$soundsEnabled ? 'translate-x-4' : 'translate-x-0.5'}"></span>
+							</button>
+						</div>
+						<div class="flex items-center justify-between pt-3 border-t border-border/20">
+							<div class="flex-1 mr-4">
+								<p class="text-sm font-medium">Boot Animations</p>
+								<p class="text-xs text-text-dim mt-0.5">Show startup animation when switching console themes.</p>
+							</div>
+							<button
+								onclick={() => bootAnimationsEnabled.update((v) => !v)}
+								class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors {$bootAnimationsEnabled ? 'bg-accent' : 'bg-bg-tertiary'}"
+								role="switch"
+								aria-checked={$bootAnimationsEnabled}
+								aria-label="Toggle boot animations"
+							>
+								<span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform {$bootAnimationsEnabled ? 'translate-x-4' : 'translate-x-0.5'}"></span>
 							</button>
 						</div>
 					</div>

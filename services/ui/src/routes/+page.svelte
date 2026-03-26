@@ -6,10 +6,9 @@
 	import ChatInput from '$lib/components/ChatInput.svelte';
 	import VoiceStudio from '$lib/components/VoiceStudio.svelte';
 	import MemoryManager from '$lib/components/MemoryManager.svelte';
-	import CodePlayground from '$lib/components/CodePlayground.svelte';
 	import { connect, disconnect } from '$lib/ws/client';
 	import { loadConversations, newConversation, generating } from '$lib/stores/chat';
-	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, memoryManagerOpen, codePlaygroundOpen, focusTrigger } from '$lib/stores/settings';
+	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, memoryManagerOpen, focusTrigger } from '$lib/stores/settings';
 	import { theme } from '$lib/stores/theme';
 	import ConsoleButtons from '$lib/components/ConsoleButtons.svelte';
 
@@ -84,4 +83,3 @@
 
 <VoiceStudio bind:open={$voiceStudioOpen} />
 <MemoryManager />
-<CodePlayground />

@@ -184,12 +184,16 @@ Every code change, feature addition, or configuration update MUST include corres
 - Podman container (gizmo-sandbox:latest) executed via Unix socket API
 - Client: services/orchestrator/sandbox.py (httpx AsyncHTTPTransport with UDS)
 - Socket path (inside container): /run/podman/podman.sock
-- Constraints: --network none, 256MB memory, 1 CPU, 100 PID limit, read-only rootfs, tmpfs /tmp:size=50m, USER nobody
-- Libraries: numpy, pandas, matplotlib, sympy, scipy
+- Constraints: --network none, 256MB memory, 1 CPU, 256 PID limit, read-only rootfs, tmpfs /tmp:size=150m, USER nobody
+- Languages: python (numpy/pandas/matplotlib/sympy/scipy), javascript (Node.js), bash, c, cpp, go, lua
 - MAX_OUTPUT: 8000 chars (truncated)
 - Default timeout: 10s, max 30s
-- Direct execution via /api/run-code REST endpoint (Code Playground)
-- LLM execution via run_code tool (chat)
+- Direct execution via /api/run-code REST endpoint (Code Playground at /code route)
+- LLM execution via run_code tool (chat + code chat)
+- Code Playground: dedicated /code route with split-pane layout, line numbers, AI chat overlay (/ws/code-chat)
+- Code chat: isolated WebSocket, code-focused system prompt (config/code-prompt.txt), run_code tool only, no memory
+- Auto language detection on paste (detects C/C++/Go/JS/Bash/Lua/HTML/SVG/CSS/Markdown/Python from code signatures)
+- Markup languages (HTML/CSS/SVG/Markdown) auto-preview in iframe, no Run button
 
 ## Memory System (V4)
 - BM25 ranking via rank_bm25 (replaces keyword matching)
@@ -219,7 +223,7 @@ Every code change, feature addition, or configuration update MUST include corres
 - Auto-save: TaskDetail and NoteEditor debounce at 800ms, save on close/unmount via onDestroy
 - TaskItem: card-based with colored priority left border, SVG status circles, overdue ring, subtask progress
 - TaskDetail: segmented status/priority controls, tag pill input (Enter/comma/Backspace)
-- Icon rail navigation: Chat, Tasks, Settings in left sidebar
+- Icon rail navigation: Chat, Tasks, Code, Settings in left sidebar
 
 ## Enhanced Console Themes
 - Per-console sound system: 9 unique sonic identities (NES harsh square, SNES warm echo, GBA tinny, N64 bassy pitch-bend, GameCube crystalline, Wii bubbly, Switch tactile, DS cute, 3DS refined delay)
@@ -248,3 +252,4 @@ Every code change, feature addition, or configuration update MUST include corres
 - [2026-03-25] V5.1 — Enhanced console themes (per-console sounds, screen effects, message styling, boot animations), Tracker module (tasks + notes + LLM chat), icon rail navigation, copy buttons on code output, Code Playground state reset, input padding fix, constitution code block softening
 - [2026-03-26] V5.2 — Tracker redesign (overlay panels, card-based items, auto-save, segmented controls, tag pills, progress ring), AI task completion fix (ID-first context format, verification prompt)
 - [2026-03-26] V5.3 — Multi-language code execution (Python, JavaScript, Bash, C, C++, Go, Lua) + markup preview (HTML, CSS, SVG, Markdown), language selector in Code Playground, 150MB tmpfs for Go compilation
+- [2026-03-26] V5.4 — Code Playground promoted to /code route (split-pane, line numbers, AI chat overlay with /ws/code-chat), boot animations on every theme switch + opt-out toggle, conversation name in header, auto language detection on paste, icon rail Code nav

@@ -26,6 +26,7 @@ from memory import get_relevant_memories, list_memories, write_memory, read_memo
 from search import web_search
 from tools import TOOL_DEFINITIONS, execute_tool
 from tracker import router as tracker_router
+from code_chat import router as code_chat_router
 from tracker_db import init_tracker_db
 from tts import synthesize
 
@@ -347,6 +348,7 @@ app.add_middleware(
 )
 
 app.include_router(tracker_router)
+app.include_router(code_chat_router)
 
 
 # --- Title Generation ---

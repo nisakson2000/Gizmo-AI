@@ -11,3 +11,4 @@ function persistedWritable<T>(key: string, defaultValue: T) {
 }
 
 export const soundsEnabled = persistedWritable<boolean>('gizmo:sounds', false);
+export const bootAnimationsEnabled = persistedWritable<boolean>('gizmo:bootAnimations', true);

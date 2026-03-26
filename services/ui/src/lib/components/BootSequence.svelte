@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { theme } from '$lib/stores/theme';
 	import { playBootSound } from '$lib/utils/sounds';
+	import { bootAnimationsEnabled } from '$lib/stores/sounds';
 
 	let visible = $state(false);
 	let animating = $state(false);
@@ -54,13 +55,12 @@
 
 	let lastTheme = $state('');
 
-	// Watch for theme changes AND initial load
+	// Watch for theme changes — play boot on every switch if enabled
 	$effect(() => {
 		const t = $theme;
 		if (t === lastTheme) return; // no change
 		lastTheme = t;
-		if (t !== 'default' && !hasBooted(t)) {
-			// Small delay on initial load to let the DOM settle
+		if (t !== 'default' && $bootAnimationsEnabled) {
 			setTimeout(() => triggerBoot(t), 100);
 		}
 	});

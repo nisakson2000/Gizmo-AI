@@ -2,7 +2,7 @@
 	import { marked } from 'marked';
 	import { tick } from 'svelte';
 	import { messages, generating, streamingThinking, streamingContent, streamingToolCalls, activeConversationId, generatingConversationId } from '$lib/stores/chat';
-	import { pendingSuggestion, voiceStudioOpen, codePlaygroundOpen } from '$lib/stores/settings';
+	import { pendingSuggestion, voiceStudioOpen } from '$lib/stores/settings';
 	import { sanitize } from '$lib/utils/sanitize';
 	import { highlightCode } from '$lib/actions/highlight';
 	import ChatMessage from './ChatMessage.svelte';
@@ -15,7 +15,7 @@
 		{ icon: 'audio', label: 'Audio', prompt: '__audio_upload__', desc: 'Transcribe & analyze audio files' },
 		{ icon: 'search', label: 'Search', prompt: 'Search the web for the latest news today', desc: 'Real-time web search via SearXNG' },
 		{ icon: 'brain', label: 'Reason', prompt: 'Think step by step: if a train travels 60 mph for 2.5 hours, how far does it go?', desc: 'Extended thinking for complex problems' },
-		{ icon: 'code', label: 'Code', prompt: '__code_playground__', desc: 'Run Python code in a sandbox' },
+		{ icon: 'code', label: 'Code', prompt: 'Write code that ', desc: 'Ask Gizmo to write and run code' },
 		{ icon: 'mic', label: 'Voice Studio', prompt: '__voice_studio__', desc: 'Clone voices & text-to-speech' },
 		{ icon: 'file', label: 'Files', prompt: 'Summarize the document I upload', desc: 'Upload PDFs, code, text for analysis' },
 	];
@@ -23,10 +23,6 @@
 	function useSuggestion(prompt: string) {
 		if (prompt === '__voice_studio__') {
 			voiceStudioOpen.set(true);
-			return;
-		}
-		if (prompt === '__code_playground__') {
-			codePlaygroundOpen.set(true);
 			return;
 		}
 		if (prompt === '__audio_upload__') {

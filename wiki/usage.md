@@ -146,32 +146,45 @@ Open the Memory Manager from **Settings → Memory Manager** to view and manage 
 
 ## Code Playground
 
-Open the Code Playground via the **Code** suggestion card on the home screen or from the chat area.
+Access via the **Code** icon in the left navigation rail, or navigate to `/code`.
 
-Select a language from the dropdown in the header. Languages are grouped into **Executable** (server-side sandbox) and **Preview** (client-side rendering).
+The Code Playground is a dedicated split-pane coding environment with a built-in AI assistant.
+
+**Layout:**
+- Left pane: code editor with line numbers and per-language placeholder text
+- Right pane: execution output (stdout/stderr/exit code) or markup preview (iframe)
+- AI chat: slide-in overlay from the right via "Ask Gizmo" button — isolated from main chat, no memory access
 
 **Executable languages** (Python, JavaScript, Bash, C, C++, Go, Lua):
 - Code runs in an isolated Podman container with no network, 256MB RAM, read-only filesystem
 - Python includes numpy, pandas, matplotlib, sympy, scipy
 - Compiled languages (C, C++, Go) compile and run in one step — use higher timeouts (15-20s)
-- See stdout, stderr, exit code; click the clipboard icon to copy output
-- **Ask Gizmo** — send code to chat for Gizmo to run and explain
+- See stdout, stderr, exit code; click "Copy" in the output header to copy results
 
-**Markup preview** (HTML, CSS, SVG, Markdown):
-- Renders client-side in an iframe — no server execution
+**Markup languages** (HTML, CSS, SVG, Markdown):
+- Live auto-preview as you type (debounced 300ms) — no Run button needed
 - CSS provides sample HTML elements for styling preview
 - SVG renders on a dark background
 - Markdown renders with dark-themed styling
-- The "Ask Gizmo" button and timeout selector are hidden for markup languages
 
-The playground resets to a clean state each time you open it (including language selection).
+**Auto language detection:**
+- Paste code into an empty editor and the language switches automatically based on code signatures
+- Works with Ctrl+A → paste to replace existing code
+- Detects C, C++, Go, JavaScript, Bash, Lua, Python, HTML, SVG, CSS, Markdown
+
+**AI Code Assistant:**
+- Click "Ask Gizmo" to open the chat overlay
+- The AI sees your current code and language as context with every message
+- Can execute code via the `run_code` tool — responses include syntax-highlighted code blocks with Copy buttons
+- Fully isolated from main chat — no shared history, no memory tools
 
 **Shortcuts:**
-- **Ctrl+Enter** — Run / Preview
+- **Ctrl+Enter** — Run code
 - **Tab** — Insert 4 spaces (instead of moving focus)
-- **Escape** — Close the playground
 
 **Timeout options** (executable only): 5s, 10s, 20s, 30s (default 10s)
+
+Code resets to a clean state each time you navigate to `/code`.
 
 ## Conversation Management
 
@@ -217,7 +230,7 @@ Handheld themes (GBA, DS, 3DS, Switch) feature physical console elements — but
 - **Sound effects** — each console has its own unique sonic identity (NES harsh square waves, SNES warm echo, GBA tinny chimes, N64 bassy pitch bends, GameCube crystalline plinks, Wii bubbly detuned tones, Switch ultra-short tactile clicks, DS cute sine, 3DS refined delay). Enable in Settings → Sounds.
 - **Screen effects** — subtle display technology overlays: CRT phosphor vignette (NES), warm phosphor glow (SNES), LCD dot matrix grid (GBA), distance fog (N64), ambient indigo glow (GameCube), horizontal stripes (Wii), neon Joy-Con bleed (Switch), touch crosshair (DS), stereoscopic parallax (3DS)
 - **Message styling** — assistant and user messages styled per console: RPG dialog boxes with double borders and blinking prompt (8-bit), Gouraud-gradient panels (N64), glassy translucent cards (GameCube), white glossy plastic with sheen (Wii), flat neon-accent cards (Switch), blue/cyan bordered cards (DS/3DS)
-- **Boot sequences** — animated startup screen plays once per session when switching themes, with per-console sound. Includes CRT static (NES), converging stars (SNES), white flash (GBA), 3D spinning cube (N64), dropping cube with impact flash (GameCube), expanding ring ripples (Wii), Joy-Con click flash (Switch), screen flash pulse (DS), parallax depth text (3DS). Click to dismiss or wait 2.8s.
+- **Boot sequences** — animated startup screen plays every time you switch to a console theme, with per-console sound. Disable via the "Boot Animations" toggle in Settings. Includes CRT static (NES), converging stars (SNES), white flash (GBA), 3D spinning cube (N64), dropping cube with impact flash (GameCube), expanding ring ripples (Wii), Joy-Con click flash (Switch), screen flash pulse (DS), parallax depth text (3DS). Click to dismiss or wait 2.8s.
 - **Interactive buttons** — console frame buttons are clickable: power replays boot sequence, reset starts new chat, eject opens file picker
 
 All console chrome and screen effects are stripped on mobile screens (< 640px) for usability.

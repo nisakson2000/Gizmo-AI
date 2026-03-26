@@ -33,6 +33,20 @@
 		<span class="text-[9px] font-medium leading-none">Tasks</span>
 	</a>
 
+	<a
+		href="/code"
+		class="flex flex-col items-center gap-0.5 w-12 py-1.5 rounded-xl transition-all
+			{$page.url.pathname.startsWith('/code')
+				? 'bg-accent/15 text-accent'
+				: 'text-text-dim hover:text-text-secondary hover:bg-bg-hover/40'}"
+		aria-label="Code"
+	>
+		<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+		</svg>
+		<span class="text-[9px] font-medium leading-none">Code</span>
+	</a>
+
 	<div class="flex-1"></div>
 
 	<button

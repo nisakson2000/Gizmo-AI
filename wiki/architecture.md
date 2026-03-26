@@ -174,6 +174,7 @@ Supports up to 5 rounds of automatic tool calling per request.
 | `/api/tracker/notes/{id}` | DELETE | Delete note |
 | `/api/tracker/tags` | GET | List all tags across tasks and notes |
 | `ws://…/ws/tracker` | WS | Tracker LLM chat for natural language task creation |
+| `ws://…/ws/code-chat` | WS | Code Playground AI assistant (isolated, run_code tool only) |
 | `/api/voices/{id}/preview` | POST | Synthesize a short preview with a saved voice (JSON: `text`) |
 | `/api/media/{filename}` | GET | Serve uploaded video/media files |
 | `/api/logs/{log_name}` | GET | Tail log file (`?lines=100`, max 1000) |
@@ -286,7 +287,8 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   ├── requirements.txt               # Python dependencies (includes rank_bm25)
 │   │   ├── main.py                        # FastAPI app, WebSocket, REST, voice/video/transcribe endpoints
 │   │   ├── memory.py                      # BM25-ranked memory system with recency weighting
-│   │   ├── sandbox.py                     # Podman sandbox client (code execution via Unix socket)
+│   │   ├── sandbox.py                     # Podman sandbox client (7-language code execution via Unix socket)
+│   │   ├── code_chat.py                  # Code Playground AI chat WebSocket handler (isolated, run_code only)
 │   │   ├── search.py                      # SearXNG proxy
 │   │   ├── tts.py                         # Qwen3-TTS proxy (voice cloning support)
 │   │   └── tools.py                       # Tool definitions and dispatch (web_search, memory, run_code)
@@ -304,11 +306,13 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │       ├── routes/+layout.svelte      # Root layout
 │   │       └── lib/
 │   │           ├── stores/chat.ts         # Conversation state (videoUrl support)
-│   │           ├── stores/settings.ts     # User preferences (voiceStudioOpen, codePlaygroundOpen, memoryManagerOpen, ttsVoiceId)
+│   │           ├── stores/settings.ts     # User preferences (voiceStudioOpen, memoryManagerOpen, ttsVoiceId)
+│   │           ├── stores/code.ts        # Code Playground state (language, persistence helpers)
 │   │           ├── stores/connection.ts   # WebSocket state
 │   │           ├── stores/theme.ts        # Nintendo theme store (persisted to localStorage)
 │   │           ├── stores/toast.ts        # Global toast notification store
 │   │           ├── ws/client.ts           # WebSocket manager (sends voice_id when set)
+│   │           ├── ws/code-client.ts     # Code Playground AI chat WebSocket client
 │   │           ├── utils/sanitize.ts      # HTML sanitization
 │   │           ├── actions/highlight.ts   # Code syntax highlighting
 │   │           └── components/
@@ -320,7 +324,8 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │               ├── Settings.svelte    # Settings panel (TTS voice dropdown, Memory Manager shortcut)
 │   │               ├── VoiceStudio.svelte # Voice Studio modal
 │   │               ├── MemoryManager.svelte # Memory CRUD modal
-│   │               ├── CodePlayground.svelte # Code execution modal (Run + Ask Gizmo)
+│   │               ├── CodePlayground.svelte # Legacy modal (unused — Code Playground is now at /code route)
+│   │       ├── routes/code/+page.svelte   # Code Playground page (split-pane, AI chat overlay)
 │   │               ├── ThinkingBlock.svelte # Collapsible thinking display
 │   │               ├── ToolCallBlock.svelte # Tool call display (includes run_code)
 │   │               └── Toast.svelte       # Global toast notification overlay
