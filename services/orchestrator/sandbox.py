@@ -92,7 +92,7 @@ async def run_code(code: str, language: str = "python", timeout: int = DEFAULT_T
         "HostConfig": {
             "Memory": 256 * 1024 * 1024,  # 256MB
             "NanoCpus": 1_000_000_000,  # 1.0 CPU
-            "PidsLimit": 100,
+            "PidsLimit": 256,
             "ReadonlyRootfs": True,
             "Tmpfs": {"/tmp": "size=150m"},
             "SecurityOpt": ["no-new-privileges"],
