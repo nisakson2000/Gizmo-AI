@@ -151,7 +151,7 @@ This builds llama.cpp from source inside a container with CUDA 12.4 support, tar
 podman build -t gizmo-sandbox:latest services/sandbox/
 ```
 
-This creates a minimal Python image with numpy, pandas, matplotlib, sympy, and scipy for sandboxed code execution. The sandbox runs with no network access, 256MB memory limit, and a read-only filesystem.
+This creates a multi-runtime sandbox image with Python (numpy, pandas, matplotlib, sympy, scipy), Node.js, GCC/G++, Go, and Lua for sandboxed code execution in 7 languages. The sandbox runs with no network access, 256MB memory limit, and a read-only filesystem.
 
 **Estimated time:** 5-10 minutes for llama.cpp, ~2 minutes for sandbox.
 

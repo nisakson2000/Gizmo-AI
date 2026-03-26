@@ -51,7 +51,6 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 
 ### Productivity
 - **Task Tracker** — built-in task and note management with tags, priorities, due dates, recurrence, and subtasks; LLM-powered natural language task creation via dedicated `/tracker` route
-- **Code Playground** — dedicated `/code` page with split-pane layout, AI code assistant, auto language detection on paste, copy output
 
 ### UI & System
 - **Nintendo console themes** — 9 themes (NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, Switch) with physical console frames, per-console sound effects, screen technology overlays (CRT vignette, LCD dot matrix, fog, neon bleed), era-specific message styling, and animated boot sequences
