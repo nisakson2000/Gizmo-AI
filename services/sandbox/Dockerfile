@@ -1,7 +1,8 @@
 FROM docker.io/python:3.12-slim
 
-# Python libraries (existing)
-RUN pip install --no-cache-dir numpy pandas matplotlib sympy scipy && \
+# Python libraries
+RUN pip install --no-cache-dir numpy pandas matplotlib sympy scipy \
+    reportlab openpyxl python-docx python-pptx && \
     rm -rf /root/.cache
 
 # Additional language runtimes

@@ -45,7 +45,7 @@ CODE_CHAT_TOOLS = [
         "type": "function",
         "function": {
             "name": "run_code",
-            "description": "Execute code in a sandboxed container. Supported languages: python (with numpy, pandas, matplotlib, sympy, scipy), javascript (Node.js), bash, c, cpp, go, lua. No network access.",
+            "description": "Execute code in a sandboxed container. Supported languages: python (with numpy, pandas, matplotlib, sympy, scipy, reportlab, openpyxl, python-docx, python-pptx), javascript (Node.js), bash, c, cpp, go, lua. No network access. To generate downloadable files, write them to /tmp/output/.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -86,6 +86,11 @@ async def _execute_code_tool(arguments: dict) -> str:
         parts.append(f"stdout:\n{result['stdout']}")
     if result["stderr"]:
         parts.append(f"stderr:\n{result['stderr']}")
+    if result.get("output_files"):
+        file_lines = ["Generated files:"]
+        for f in result["output_files"]:
+            file_lines.append(f"- {f['filename']}: {f['url']}")
+        parts.append("\n".join(file_lines))
     if not parts:
         parts.append(f"(no output, exit code {result['exit_code']})")
     return "\n".join(parts)

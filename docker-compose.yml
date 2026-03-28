@@ -123,6 +123,7 @@ services:
       - WHISPER_HOST=gizmo-whisper
       - WHISPER_PORT=8000
       - MODEL_NAME=Huihui-Qwen3.5-9B-abliterated.Q8_0
+      - MEDIA_HOST_DIR=${PWD}/media
     depends_on:
       - gizmo-llama
     restart: unless-stopped

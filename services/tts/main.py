@@ -164,9 +164,6 @@ def _generate_chunks(chunks: list[str], language: str, clone_prompt=None,
                 text=chunk,
                 language=language,
                 voice_clone_prompt=clone_prompt,
-                temperature=0.8,
-                top_p=0.9,
-                repetition_penalty=1.05,
             )
         elif ref_audio:
             chunk_wavs, sr = model.generate_voice_clone(
@@ -175,9 +172,6 @@ def _generate_chunks(chunks: list[str], language: str, clone_prompt=None,
                 ref_audio=ref_audio,
                 ref_text=ref_text,
                 x_vector_only_mode=x_vector_only,
-                temperature=0.8,
-                top_p=0.9,
-                repetition_penalty=1.05,
             )
         else:
             chunk_wavs, sr = model.generate_voice_clone(
@@ -186,9 +180,6 @@ def _generate_chunks(chunks: list[str], language: str, clone_prompt=None,
                 ref_audio=DEFAULT_REF_AUDIO,
                 ref_text=DEFAULT_REF_TEXT,
                 x_vector_only_mode=False,
-                temperature=0.8,
-                top_p=0.9,
-                repetition_penalty=1.05,
             )
         all_wavs.append(chunk_wavs[0])
 
@@ -237,29 +228,25 @@ async def synthesize(request: Request):
                      len(text), len(chunks), speed, language)
 
         if voice_ref:
-            # Voice cloning mode
+            # Voice cloning mode — single call (no chunking to avoid per-chunk warmup artifacts)
             ref_audio_bytes = base64.b64decode(voice_ref)
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 tmp.write(ref_audio_bytes)
                 tmp_path = tmp.name
 
             try:
-                # Try cached prompt path first
-                use_icl = bool(voice_ref_text)
-                try:
-                    clone_prompt = _get_clone_prompt(tmp_path, voice_ref_text or None, not use_icl)
-                    final_wav, sr = _generate_chunks(chunks, language, clone_prompt=clone_prompt)
-                except (AttributeError, TypeError):
-                    # create_voice_clone_prompt not available in this qwen-tts version
-                    logger.info("Clone prompt caching not supported, using direct generation")
-                    final_wav, sr = _generate_chunks(
-                        chunks, language, ref_audio=tmp_path,
-                        ref_text=voice_ref_text or None, x_vector_only=not use_icl,
-                    )
+                wavs, sr = model.generate_voice_clone(
+                    text=text,
+                    language=language,
+                    ref_audio=tmp_path,
+                    ref_text=None,
+                    x_vector_only_mode=True,
+                )
+                final_wav = wavs[0]
             finally:
                 os.unlink(tmp_path)
         else:
-            # Default voice mode
+            # Default voice mode — chunking is safe (no cloning artifacts)
             final_wav, sr = _generate_chunks(chunks, language)
 
     except Exception as e:

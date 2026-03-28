@@ -880,17 +880,32 @@ async def upload_video(file: UploadFile = File(...)):
 
 @app.get("/api/media/{filename}")
 async def serve_media(filename: str):
-    """Serve uploaded media files (videos, etc.)."""
+    """Serve uploaded media files (videos, documents, etc.)."""
     filepath = (MEDIA_DIR / filename).resolve()
     if not filepath.is_relative_to(MEDIA_DIR.resolve()):
         return JSONResponse(status_code=400, content={"error": "Invalid path"})
     if not filepath.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
-    # Determine content type from extension
     ext = filepath.suffix.lower()
-    ct_map = {".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".avi": "video/x-msvideo"}
+    ct_map = {
+        ".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".avi": "video/x-msvideo",
+        ".wav": "audio/wav", ".mp3": "audio/mpeg",
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml",
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".csv": "text/csv", ".txt": "text/plain", ".json": "application/json",
+        ".html": "text/html", ".xml": "application/xml",
+        ".zip": "application/zip", ".tar.gz": "application/gzip",
+    }
     content_type = ct_map.get(ext, "application/octet-stream")
-    return FileResponse(filepath, media_type=content_type)
+    # Force download for document types (PDFs open in browser naturally)
+    download_exts = {".docx", ".xlsx", ".pptx", ".csv", ".txt", ".json", ".xml", ".zip"}
+    headers = {}
+    if ext in download_exts:
+        headers["Content-Disposition"] = f'attachment; filename="{filepath.name}"'
+    return FileResponse(filepath, media_type=content_type, headers=headers)
 
 
 # --- Conversations ---
@@ -1250,7 +1265,7 @@ async def save_voice(file: UploadFile = File(...), name: str = Form(...), max_du
         wav_path = str(VOICES_DIR / f"{voice_id}.wav")
         subprocess.run(
             ["ffmpeg", "-i", raw_path, "-t", str(dur), "-ar", "24000", "-ac", "1",
-             "-af", "apad=pad_dur=0.5", "-y", wav_path],
+             "-y", wav_path],
             capture_output=True,
         )
 
