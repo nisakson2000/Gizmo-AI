@@ -550,13 +550,14 @@ async def ws_chat(ws: WebSocket):
 
             # Route the request
             route_result = route(user_text)
+            clean_text = route_result.cleaned_message
             if route_result.pattern:
                 conv_log.info("[%s] Pattern activated: %s", trace_id, route_result.pattern["name"])
 
-            # Build prompt with pattern
+            # Build prompt with pattern (use cleaned text for memory retrieval)
             has_vision = bool(image_data or video_frames)
             system_prompt = build_system_prompt(
-                user_text,
+                clean_text,
                 has_vision=has_vision,
                 pattern=route_result.pattern,
             )
@@ -728,13 +729,17 @@ async def rest_chat(
 
     conv_log.info("[REST] USER (%s): %s", conversation_id, message[:500])
 
+    # Route the request
+    route_result = route(message)
+    clean_text = route_result.cleaned_message
+
     history = get_conversation_messages(conversation_id)
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]
-    history_msgs.append({"role": "user", "content": message})
+    history_msgs.append({"role": "user", "content": clean_text})
 
-    save_message(conversation_id, "user", message)
+    save_message(conversation_id, "user", clean_text)
 
-    system_prompt = build_system_prompt(message)
+    system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern)
     context_length = max(2048, min(context_length, 131072))
     history_msgs = window_messages(history_msgs, system_prompt, context_length)
     messages = build_messages(history_msgs, system_prompt)
@@ -746,7 +751,8 @@ async def rest_chat(
     for _ in range(max_tool_rounds):
         tool_calls_pending = []
 
-        async for event in stream_chat(messages, thinking):
+        async for event in stream_chat(messages, thinking,
+                                       tool_schemas=route_result.tool_schemas):
             if event["type"] == "token":
                 full_response += event["content"]
             elif event["type"] == "thinking":

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -46,7 +47,11 @@ def _load_patterns():
                 logger.warning("Failed to parse config.yaml for '%s': %s", pattern_dir.name, e)
 
         # Load system prompt
-        system_prompt = system_path.read_text(encoding="utf-8").strip()
+        try:
+            system_prompt = system_path.read_text(encoding="utf-8").strip()
+        except Exception as e:
+            logger.warning("Failed to read system.md for '%s': %s", pattern_dir.name, e)
+            continue
 
         pattern = {
             "name": config.get("name", pattern_dir.name),
@@ -69,9 +74,10 @@ def get_pattern(name: str) -> Optional[dict]:
     return _pattern_cache.get(name)
 
 
-def match_pattern(user_message: str) -> Optional[dict]:
+def match_pattern(user_message: str) -> tuple[Optional[dict], str]:
     """Find the best matching pattern for a user message via keyword matching.
-    Returns the pattern dict or None if no match.
+    Returns (pattern_dict_or_None, cleaned_message). The cleaned message has
+    the [pattern:name] prefix stripped if it was used for explicit invocation.
     """
     if not _cache_loaded:
         _load_patterns()
@@ -83,19 +89,20 @@ def match_pattern(user_message: str) -> Optional[dict]:
         end = msg_lower.index("]") if "]" in msg_lower else -1
         if end > 0:
             pattern_name = msg_lower[9:end].strip()
-            return _pattern_cache.get(pattern_name)
+            cleaned = user_message[end + 1:].strip()
+            return _pattern_cache.get(pattern_name), cleaned or user_message
 
-    # Keyword matching — longest keyword match wins (more specific = better)
+    # Keyword matching — word-boundary regex, longest match wins
     best_match = None
     best_length = 0
 
     for pattern in _pattern_cache.values():
         for keyword in pattern["keywords"]:
-            if keyword in msg_lower and len(keyword) > best_length:
+            if len(keyword) > best_length and re.search(r'\b' + re.escape(keyword) + r'\b', msg_lower):
                 best_match = pattern
                 best_length = len(keyword)
 
-    return best_match
+    return best_match, user_message
 
 
 def list_patterns() -> list[dict]:

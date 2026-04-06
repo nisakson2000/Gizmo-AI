@@ -38,7 +38,8 @@ class RouteResult:
         self.tool_names: list[str] = []
         self.tool_schemas: list[dict] = []
         self.pattern: Optional[dict] = None
-        self.source: str = "default"  # "keyword", "pattern", or "default"
+        self.cleaned_message: str = ""  # message with [pattern:name] prefix stripped
+        self.source: str = "default"
 
     def __repr__(self):
         tools = ", ".join(self.tool_names)
@@ -55,6 +56,7 @@ def route(user_message: str) -> RouteResult:
     3. Default (core tool set)
     """
     result = RouteResult()
+    result.cleaned_message = user_message
     default_tools = get_default_tools()
 
     # ── Step 1: Keyword pre-routing ──
@@ -62,20 +64,18 @@ def route(user_message: str) -> RouteResult:
     for pattern_re, tool_names in KEYWORD_ROUTES:
         if pattern_re.search(user_message):
             for t in tool_names:
-                if has_tool(t):  # only add tools that have schemas registered
+                if has_tool(t):
                     keyword_tools.add(t)
 
     if keyword_tools:
-        # Merge keyword-matched tools with always-available tools
         result.tool_names = list(set(default_tools) | keyword_tools)
         result.tool_schemas = get_tool_schemas(result.tool_names)
         result.source = "keyword"
         logger.info("Keyword route: %s → %s", user_message[:50], list(keyword_tools))
-        # Don't return yet — still check for pattern match
-        # (a user might say "analyze this threat report and generate a pdf")
 
     # ── Step 2: Pattern matching ──
-    matched_pattern = match_pattern(user_message)
+    matched_pattern, cleaned = match_pattern(user_message)
+    result.cleaned_message = cleaned
     if matched_pattern:
         result.pattern = matched_pattern
         result.source = "pattern" if not keyword_tools else "keyword+pattern"

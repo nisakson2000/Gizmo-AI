@@ -1,9 +1,9 @@
 name: explain_technical
 description: Explain a technical concept at the appropriate level for the audience
 keywords:
-  - explain
-  - what is
-  - how does
+  - explain concept
+  - explain topic
+  - technical explanation
   - teach me
   - eli5
 tools:

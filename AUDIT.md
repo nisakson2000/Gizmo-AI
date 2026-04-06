@@ -1,102 +1,196 @@
 # Gizmo-AI — Audit Report
 
-**Original Date:** 2026-03-25
-**Updated:** 2026-04-06
+**Date:** 2026-04-06
 **Auditor:** Claude Code
-**Build:** Gizmo-AI V5.7, Huihui-Qwen3.5-9B-abliterated.Q8_0.gguf + Qwen3-TTS-12Hz-1.7B-Base + Whisper (faster-whisper-base)
-**Scope:** Full codebase review — orchestrator (main.py, llm.py, tracker.py, tracker_db.py, tracker_tools.py, memory.py, tools.py, sandbox.py, search.py, tts.py, code_chat.py), all UI components (.svelte, .ts), docker-compose, documentation
+**Build:** Gizmo-AI V5.7
+**Scope:** Full codebase review — pattern system (router.py, patterns.py, 30 pattern configs), orchestrator (main.py, llm.py, tools.py, tracker.py, tracker_db.py, tracker_tools.py, memory.py, sandbox.py, search.py, tts.py, code_chat.py), all UI components (.svelte, .ts), docker-compose.yml, constitution.txt
 
 ---
 
 ## Summary
 
-| Severity | Open | Resolved |
-|----------|------|----------|
-| Critical | 0 | 5 |
-| Warning | 0 | 17 |
-| Suggestion | 4 | 6 |
-| **Total** | **4** | **28** |
-
-All critical and warning issues from the V5.1 audit have been resolved.
+| Severity | Count |
+|----------|-------|
+| Warning  | 3     |
+| Suggestion | 7   |
+| **Total** | **10** |
 
 ---
 
-## Resolved Issues — Critical
+## Open Issues — Warning
 
-| # | Issue | Location | Resolution |
-|---|-------|----------|------------|
-| C1 | Tracker endpoints may reject JSON bodies | `tracker.py` | Fixed — switched to `request: Request` + `await request.json()` pattern |
-| C2 | `openFilePicker` drops the selected file | `ConsoleButtons.svelte` | Fixed — dispatches `gizmo:upload` custom event, `ChatInput.svelte` listens and triggers file upload |
-| C3 | Concurrent `loadTasks()`/`loadNotes()` race on `tool_result` | `tracker-client.ts` | Fixed — refresh moved to `done` event only, not per `tool_result` |
-| C4 | Tag LIKE search false-positive matches | `tracker_db.py` | Fixed — uses `json_each()`: `EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)` |
-| C5 | `JSON.parse` on persisted localStorage with no try/catch | `settings.ts`, `tracker.ts` | Fixed — both `persistedWritable` implementations wrap `JSON.parse` in try/catch |
+### W1. Substring keyword matching causes false-positive pattern activation
 
----
+**Location:** `patterns.py:94`
+**Code:** `if keyword in msg_lower and len(keyword) > best_length`
 
-## Resolved Issues — Warning (Backend)
+The keyword matcher uses plain Python `in` (substring containment), not word-boundary matching. Short or common keywords embedded inside unrelated words cause incorrect pattern activation.
 
-| # | Issue | Location | Resolution |
-|---|-------|----------|------------|
-| W1 | `LLAMA_URL` imported then shadowed | `main.py` | Fixed — removed duplicate import, only `stream_chat` imported from `llm.py` |
-| W2 | `arguments.pop()` mutates caller's dict | `tracker_tools.py` | Low risk — fresh `json.loads()` per call; no shared reference |
-| W3 | Synchronous SQLite on async WebSocket | `tracker.py` | Fixed — `_build_context_summary()` uses `asyncio.to_thread()` |
-| W4 | `delete_task` orphans grandchild tasks | `tracker_db.py` | Fixed — recursive CTE deletes all descendants |
-| W5 | `complete_task` recurrence is non-atomic | `tracker_db.py` | Fixed — single connection and `conn.commit()` for both UPDATE + INSERT |
-| W6 | Partial response saved to history on stream error | `tracker.py`, `code_chat.py` | Fixed — `stream_errored` flag prevents saving corrupt history |
+**Concrete examples:**
 
-## Resolved Issues — Warning (UI)
+| Keyword | Pattern | False match in | Result |
+|---------|---------|----------------|--------|
+| `vs` (2 chars) | compare_options | "plot on a **canvas**" | Comparison pattern activates on unrelated message |
+| `vs` | compare_options | "check **devs** tools" | Same |
+| `what is` (7 chars) | explain_technical | "**what is** the weather today" | Technical explanation pattern activates on casual question |
+| `how does` (8 chars) | explain_technical | "**how does** the pasta taste" | Same — not a technical question |
+| `edit this` (9 chars) | improve_writing | "**edit this** code to add logging" | Writing pattern activates on a code editing request |
+| `not working` (11 chars) | debug_code | "my **not working** hours schedule" | Code debug pattern activates on non-code message |
 
-| # | Issue | Location | Resolution |
-|---|-------|----------|------------|
-| W7 | All tracker API errors silently swallowed | `tracker.ts` | Fixed — catch blocks call `toast()` with error messages |
-| W8 | `$effect` sync clobbers in-progress edits | `TaskDetail.svelte`, `NoteEditor.svelte` | Fixed — `lastSyncedId` pattern only syncs when selected ID changes |
-| W9 | Sort `<select>` not bound to store value | `TaskList.svelte` | Fixed — `value={$taskFilter.sort}` binding present |
-| W10 | `connectTracker()` doesn't cancel pending reconnect | `tracker-client.ts` | Fixed — `clearTimeout(reconnectTimeout)` at top of `connectTracker()` |
-| W11 | `reconnectDelay` never reset | `tracker-client.ts` | Fixed — `reconnectDelay = 1000` in `disconnectTracker()` |
-| W12 | `replayBoot` in ConsoleButtons is fragile | `ConsoleButtons.svelte` | Fixed — uses `gizmo:replay-boot` custom event dispatched to `BootSequence` |
-| W13 | `playCancel` imported but never called | `ChatInput.svelte` | Fixed — dead import removed, only `playSelect` imported |
-| W14 | `playBootSound` bypasses `soundsEnabled` guard | `sounds.ts` | Fixed — `if (!get(soundsEnabled)) return;` guard added |
-| W15 | `disconnectTracker` doesn't reset streaming state | `tracker-client.ts` | Fixed — finalizes message and clears streaming stores on disconnect |
-| W16 | BootSequence dismiss `setTimeout` not tracked | `BootSequence.svelte` | Fixed — cleanup `$effect` clears both `skipTimeout` and `fadeTimeout` |
+**Impact:** The LLM receives the wrong pattern's system prompt (e.g., "You are a writing improvement specialist" when the user asked about code), producing off-topic structured output instead of a normal response.
 
-## Resolved Issues — Warning (Data)
-
-| # | Issue | Location | Resolution |
-|---|-------|----------|------------|
-| W17 | `loadConversation` drops variant/media state | `chat.ts` | Accepted — variants are session-only state, not DB-persisted by design |
+**Fix:** Replace substring matching with word-boundary regex: `re.search(r'\b' + re.escape(keyword) + r'\b', msg_lower)`. Additionally, audit the keyword lists to remove or lengthen keywords under 4 characters (see S1 and S2).
 
 ---
 
-## Resolved Issues — Suggestions
+### W2. REST `/api/chat` endpoint not integrated with pattern router
 
-| # | Issue | Location | Resolution |
-|---|-------|----------|------------|
-| S1 | Cache `_load_tracker_prompt()` | `tracker.py` | Fixed — mtime-checked cache, reads disk only when file changes |
-| S2 | `_build_context_summary` truncates mid-line | `tracker.py` | Fixed — `rsplit("\n", 1)[0]` truncates at line boundary |
-| S3 | `list_notes()` fetches all then slices in Python | `tracker.py`, `tracker_db.py` | Fixed — `LIMIT` clause in SQL query |
-| S8 | `_new_id()` uses 8 hex chars (32 bits) | `tracker_db.py` | Fixed — increased to 12 hex chars (48 bits) |
-| S9 | CLAUDE.md Future Roadmap stale | `CLAUDE.md` | Reviewed — roadmap items are genuine future plans, not stale |
-| S10 | VRAM docs inconsistent | `wiki/setup.md` vs `CLAUDE.md` | Documented — different figures reflect different measurement points (peak vs steady-state) |
+**Location:** `main.py:737` and `main.py:749`
+
+The WebSocket handler correctly uses the pattern router:
+```python
+# main.py:552-573 (WebSocket — correct)
+route_result = route(user_text)
+system_prompt = build_system_prompt(user_text, has_vision=has_vision, pattern=route_result.pattern)
+async for event in stream_chat(messages, ..., tool_schemas=route_result.tool_schemas):
+```
+
+The REST handler does not:
+```python
+# main.py:737-749 (REST — missing router)
+system_prompt = build_system_prompt(message)           # no pattern parameter
+async for event in stream_chat(messages, thinking):    # no tool_schemas parameter
+```
+
+**Impact:** Patterns never activate on REST API requests. Tool scoping (the core feature of V5.7) doesn't apply. The REST endpoint always sends all 6 tool definitions regardless of intent, and never injects pattern system prompts.
+
+**Fix:** Add `route_result = route(message)` and pass `pattern=route_result.pattern` and `tool_schemas=route_result.tool_schemas` in the REST handler, mirroring the WebSocket handler.
 
 ---
 
-## Open Suggestions
+### W3. Unhandled exception reading `system.md` can crash app startup
 
-| # | Issue | Location | Description |
-|---|-------|----------|-------------|
-| S4 | Google Fonts loaded from CDN | `themes.css` | Self-hosted app depends on external CDN. Fonts unavailable on isolated LAN. Self-host in `static/fonts/`. |
-| S5 | Console sounds toggle missing `aria-label` | `Settings.svelte` | `role="switch"` has no label for screen readers. Add `aria-label="Toggle console sounds"`. |
-| S6 | Sidebar mobile overlay has no keyboard dismiss | `Sidebar.svelte` | Escape doesn't close sidebar on mobile. Add `sidebarOpen` to the layout's Escape handler chain. |
-| S7 | No unsaved-changes guard in TaskDetail/NoteEditor | `TaskDetail.svelte`, `NoteEditor.svelte` | Auto-save mitigates data loss, but clicking another task/note during the 800ms debounce window can discard edits. Low risk due to `onDestroy` save. |
+**Location:** `patterns.py:49`
+
+The `_load_patterns()` function wraps `config.yaml` parsing in try/except (line 43-46) but does NOT wrap `system.md` reading:
+
+```python
+# Line 43-46 — config.yaml: has try/except (good)
+try:
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+except Exception as e:
+    logger.warning(...)
+
+# Line 49 — system.md: NO try/except (bad)
+system_prompt = system_path.read_text(encoding="utf-8").strip()
+```
+
+Since `reload_patterns()` is called during FastAPI lifespan startup (`main.py:362`), any unreadable `system.md` (permissions error, encoding issue, disk error) crashes the entire orchestrator container.
+
+**Impact:** One bad pattern file prevents all 6 services from functioning (orchestrator won't start, UI has no backend).
+
+**Fix:** Wrap line 49 in try/except with a `logger.warning()` and `continue`, matching the config.yaml error handling pattern.
 
 ---
 
-## Additional Findings (2026-04-06 review)
+## Open Issues — Suggestion
 
-These items were identified during the V5.6 comprehensive code review and fixed in the same session:
+### S1. Keyword matching should use word-boundary regex
 
-| # | Issue | Location | Severity | Description | Fix |
-|---|-------|----------|----------|-------------|-----|
-| N1 | Code injection in `_build_doc_code()` | `tools.py:151-248` | Warning | Triple-quote breakout possible when title/content contained `'''`. Sandbox isolation limited blast radius but was still a code injection vector. | Replaced string interpolation with base64 encoding. Title/content decoded safely inside sandbox. |
-| N2 | SQL LIKE metacharacter not escaped in search | `main.py:926-940` | Low | Searching for `%` or `_` matched unintended rows due to LIKE wildcards. Not a security issue (parameterized queries prevent SQL injection) but a correctness bug. | Added `ESCAPE '\\'` clause and escaping of `%`, `_`, `\\` in search term. |
-| N3 | `settings.ts` `persistedWritable` missing try/catch | `settings.ts:3-10` | Warning | Identical to C5 but in settings store (tracker store was already fixed). Corrupt localStorage crashed the page. | Added try/catch with fallback to defaultValue. |
+**Location:** `patterns.py:88-96`
+
+Replace the current substring approach:
+```python
+if keyword in msg_lower and len(keyword) > best_length:
+```
+With word-boundary regex:
+```python
+if re.search(r'\b' + re.escape(keyword) + r'\b', msg_lower) and len(keyword) > best_length:
+```
+
+This prevents "vs" from matching inside "canvas" while still matching "python vs javascript".
+
+---
+
+### S2. Remove or lengthen short/generic keywords
+
+**Location:** Various `config/patterns/*/config.yaml`
+
+| Pattern | Keyword | Problem | Suggested replacement |
+|---------|---------|---------|----------------------|
+| compare_options | `vs` | 2 chars, matches inside many words | Remove (keep `versus`, `pros and cons`) |
+| explain_technical | `what is` | Matches virtually any question | Remove (keep `eli5`, `teach me`) |
+| explain_technical | `how does` | Matches non-technical questions | Remove (keep `teach me`, `eli5`) |
+| explain_technical | `explain` | Ambiguous with explain_code | Change to `explain concept` or `explain topic` |
+| improve_writing | `edit this` | Matches code editing requests | Change to `edit this writing` or `edit this text` |
+| improve_writing | `rewrite` | Matches "overwrite" as substring | Change to `rewrite this` |
+| debug_code | `not working` | Matches non-code complaints | Change to `code not working` or `is not working` |
+| debug_code | `error in` | Matches "terror in" etc. | Change to `error in my code` or `error in this` |
+
+---
+
+### S3. Strip `[pattern:name]` prefix from user message after matching
+
+**Location:** `patterns.py:82-86` (match only), `main.py:531,548` (sent to LLM and saved to DB)
+
+When a user sends `[pattern:extract_wisdom] key takeaways from this article`, the `[pattern:extract_wisdom]` prefix is:
+- Sent to the LLM in the user message (line 531)
+- Saved to the conversation database (line 548)
+- Used for BM25 memory retrieval (line 558 via build_system_prompt)
+
+The prefix is noise for the LLM and pollutes memory matching. The router should strip the prefix after matching, passing only the actual user message downstream.
+
+---
+
+### S4. Google Fonts loaded from CDN
+
+**Location:** `themes.css`
+
+Self-hosted app depends on external Google Fonts CDN. Fonts unavailable on isolated LAN. Self-host in `static/fonts/`.
+
+---
+
+### S5. Console sounds toggle missing `aria-label`
+
+**Location:** `Settings.svelte`
+
+`role="switch"` element has no label for screen readers. Add `aria-label="Toggle console sounds"`.
+
+---
+
+### S6. Sidebar mobile overlay has no keyboard dismiss
+
+**Location:** `Sidebar.svelte`
+
+Escape key doesn't close sidebar on mobile. Add `sidebarOpen` to the layout's Escape handler chain.
+
+---
+
+### S7. No unsaved-changes guard in TaskDetail/NoteEditor
+
+**Location:** `TaskDetail.svelte`, `NoteEditor.svelte`
+
+Auto-save mitigates data loss, but clicking another task/note during the 800ms debounce window can discard edits. Low risk due to `onDestroy` save.
+
+---
+
+## Things That Are Correct
+
+The following areas were audited and found to be clean:
+
+- **All imports valid** — No circular imports, no missing modules across all orchestrator Python files and UI TypeScript/Svelte files
+- **async/await correctness** — All async generators properly consumed, no missing awaits
+- **Tool registry consistency** — All 6 TOOL_DEFINITIONS have matching TOOL_REGISTRY entries; all pattern config.yaml `tools` lists reference valid tool names only
+- **Pattern loading** — 30 patterns load correctly, cache system works, `list_patterns()` and `get_pattern()` return expected data
+- **Router three-step logic** — Keyword pre-routing, pattern matching, and default fallback work correctly for the documented cases; tool sets properly merge via set union
+- **Tool scoping** — `get_default_tools()` returns always_available tools; patterns add their scoped tools on top; keyword routes add their tools on top; no tool is accidentally excluded
+- **WebSocket protocol** — All message types (trace_id, thinking, token, tool_call, tool_result, tts_info, audio, done, title, error) properly handled in all three WS clients (chat, code, tracker)
+- **ToolCallBlock.svelte** — Correct Svelte 5 $props usage, media detection works, copy-to-clipboard functional, all tool labels present
+- **Constitution** — New `<patterns>` section properly instructs the LLM to follow active patterns
+- **Docker/Podman** — pyyaml>=6.0 in requirements.txt, config/ mounted read-only at /app/config, patterns directory accessible at /app/config/patterns
+- **VRAM safety** — No new GPU consumers added; pattern system is CPU-only (text matching + YAML parsing)
+- **Security** — Pattern system prompts loaded from read-only mount; `[pattern:name]` lookup is cache-key only (no path traversal); no user input reaches filesystem paths
+- **Code chat and tracker isolation** — Intentionally do NOT use the pattern router; they have their own dedicated tool sets (run_code for code chat, tracker tools for tracker). This is correct by design.
+- **Multi-round tool loop** — Both WebSocket (line 596-664) and continuation streams (line 641-642) pass `route_result.tool_schemas` consistently
+- **persistedWritable extraction** — Clean dedup into `persisted.ts`, all 5 consumers properly import, try/catch on JSON.parse present
+- **LIKE escaping** — Both `main.py:963` and `tracker_db.py:351-353` properly escape SQL LIKE metacharacters with `ESCAPE '\'` clause
