@@ -25,6 +25,7 @@ from llm import stream_chat as _llm_stream_chat
 from memory import get_relevant_memories, list_memories, write_memory, read_memory, delete_memory
 from search import web_search
 from tools import TOOL_DEFINITIONS, execute_tool
+from recite import fetch_recitation_content, build_recitation_context
 from router import route
 from patterns import reload_patterns, list_patterns
 from tracker import router as tracker_router
@@ -276,6 +277,20 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
             parts.append(f"- {mem}")
 
     return "\n".join(parts)
+
+
+async def prepare_recitation(route_result, log_prefix: str = "") -> tuple[str, float]:
+    """Fetch recitation content if the route detected a recitation request.
+
+    Returns (recitation_context, temperature).
+    """
+    if not route_result.recitation_subject:
+        return "", 0.7
+    content, source_url = await fetch_recitation_content(route_result.recitation_subject)
+    if content:
+        conv_log.info("%s Recitation content fetched: %d chars from %s", log_prefix, len(content), source_url)
+        return build_recitation_context(content, source_url, route_result.recitation_subject), 0.2
+    return "", 0.7
 
 
 MAX_RESPONSE_TOKENS = 8192
@@ -558,16 +573,7 @@ async def ws_chat(ws: WebSocket):
             if route_result.pattern:
                 conv_log.info("[%s] Pattern activated: %s", trace_id, route_result.pattern["name"])
 
-            # Recitation pipeline — fetch content before LLM sees the message
-            recitation_context = ""
-            llm_temperature = 0.7
-            if route_result.recitation_subject:
-                from recite import fetch_recitation_content, build_recitation_context
-                content, source_url = await fetch_recitation_content(route_result.recitation_subject)
-                if content:
-                    recitation_context = build_recitation_context(content, source_url, route_result.recitation_subject)
-                    llm_temperature = 0.2
-                    conv_log.info("[%s] Recitation content fetched: %d chars from %s", trace_id, len(content), source_url)
+            recitation_context, llm_temperature = await prepare_recitation(route_result, f"[{trace_id}]")
 
             # Build prompt with pattern (use cleaned text for memory retrieval)
             has_vision = bool(image_data or video_frames)
@@ -753,16 +759,7 @@ async def rest_chat(
     route_result = route(message)
     clean_text = route_result.cleaned_message
 
-    # Recitation pipeline
-    recitation_context = ""
-    llm_temperature = 0.7
-    if route_result.recitation_subject:
-        from recite import fetch_recitation_content, build_recitation_context
-        content, source_url = await fetch_recitation_content(route_result.recitation_subject)
-        if content:
-            recitation_context = build_recitation_context(content, source_url, route_result.recitation_subject)
-            llm_temperature = 0.2
-            conv_log.info("[REST] Recitation content fetched: %d chars from %s", len(content), source_url)
+    recitation_context, llm_temperature = await prepare_recitation(route_result, "[REST]")
 
     history = get_conversation_messages(conversation_id)
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]

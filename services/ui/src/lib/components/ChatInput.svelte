@@ -4,6 +4,7 @@
 	import { connectionStatus } from '$lib/stores/connection';
 	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen, focusTrigger } from '$lib/stores/settings';
 	import { toast } from '$lib/stores/toast';
+	import { fetchWithTimeout } from '$lib/utils/fetch';
 	import { playSelect } from '$lib/utils/sounds';
 
 	let input = $state('');
@@ -130,10 +131,7 @@
 				// Transcribe audio via Whisper, then stage transcript as a file
 				try {
 					uploading = true;
-					const ctrl = new AbortController();
-					const tid = setTimeout(() => ctrl.abort(), 60000);
-					const resp = await fetch('/api/transcribe', { method: 'POST', body: formData, signal: ctrl.signal });
-					clearTimeout(tid);
+					const resp = await fetchWithTimeout('/api/transcribe', { method: 'POST', body: formData });
 					uploading = false;
 					if (!resp.ok) {
 						showError('Audio transcription failed.');
@@ -156,10 +154,7 @@
 
 			try {
 				uploading = true;
-				const ctrl = new AbortController();
-				const tid = setTimeout(() => ctrl.abort(), 60000);
-				const resp = await fetch(endpoint, { method: 'POST', body: formData, signal: ctrl.signal });
-				clearTimeout(tid);
+				const resp = await fetchWithTimeout(endpoint, { method: 'POST', body: formData });
 				uploading = false;
 				if (!resp.ok) {
 					const err = await resp.json().catch(() => null);
@@ -197,10 +192,7 @@
 			formData.append('file', file);
 			try {
 				uploading = true;
-				const ctrl = new AbortController();
-				const tid = setTimeout(() => ctrl.abort(), 60000);
-				const resp = await fetch('/api/transcribe', { method: 'POST', body: formData, signal: ctrl.signal });
-				clearTimeout(tid);
+				const resp = await fetchWithTimeout('/api/transcribe', { method: 'POST', body: formData });
 				uploading = false;
 				if (!resp.ok) {
 					showError('Audio transcription failed.');
@@ -250,10 +242,7 @@
 				formData.append('file', blob, 'recording.webm');
 
 				try {
-					const ctrl = new AbortController();
-					const tid = setTimeout(() => ctrl.abort(), 60000);
-					const resp = await fetch('/api/transcribe', { method: 'POST', body: formData, signal: ctrl.signal });
-					clearTimeout(tid);
+					const resp = await fetchWithTimeout('/api/transcribe', { method: 'POST', body: formData });
 					if (resp.ok) {
 						const data = await resp.json();
 						if (data.text) {

@@ -4,6 +4,7 @@ Intercepts requests to recite known texts (poems, speeches, lyrics) and
 fetches the authoritative content from the web before the LLM sees the message.
 """
 
+import asyncio
 import logging
 import re
 
@@ -67,13 +68,14 @@ async def fetch_recitation_content(subject: str) -> tuple[str, str]:
         logger.info("Recitation: no search results for '%s'", subject)
         return "", ""
 
-    # Fetch top 3 pages, pick the longest meaningful result
+    # Fetch top 3 pages concurrently, pick the longest meaningful result
+    top = valid[:3]
+    texts = await asyncio.gather(*(fetch_page(r["url"]) for r in top), return_exceptions=True)
+
     best_content = ""
     best_url = ""
-
-    for r in valid[:3]:
-        text = await fetch_page(r["url"])
-        if len(text) > 200 and len(text) > len(best_content):
+    for r, text in zip(top, texts):
+        if isinstance(text, str) and len(text) > 200 and len(text) > len(best_content):
             best_content = text
             best_url = r["url"]
 

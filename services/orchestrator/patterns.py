@@ -69,11 +69,18 @@ def _load_patterns():
     logger.info("Loaded %d patterns from %s", len(_pattern_cache), PATTERNS_DIR)
 
 
-def get_pattern(name: str) -> Optional[dict]:
-    """Get a pattern by exact name."""
+def _ensure_loaded():
+    """Load patterns if not already loaded (double-checked locking)."""
+    if _cache_loaded:
+        return
     with _cache_lock:
         if not _cache_loaded:
             _load_patterns()
+
+
+def get_pattern(name: str) -> Optional[dict]:
+    """Get a pattern by exact name."""
+    _ensure_loaded()
     return _pattern_cache.get(name)
 
 
@@ -82,9 +89,7 @@ def match_pattern(user_message: str) -> tuple[Optional[dict], str]:
     Returns (pattern_dict_or_None, cleaned_message). The cleaned message has
     the [pattern:name] prefix stripped if it was used for explicit invocation.
     """
-    with _cache_lock:
-        if not _cache_loaded:
-            _load_patterns()
+    _ensure_loaded()
 
     msg_lower = user_message.lower()
 
@@ -111,9 +116,7 @@ def match_pattern(user_message: str) -> tuple[Optional[dict], str]:
 
 def list_patterns() -> list[dict]:
     """List all available patterns (name + description only)."""
-    with _cache_lock:
-        if not _cache_loaded:
-            _load_patterns()
+    _ensure_loaded()
     return [
         {"name": p["name"], "description": p["description"]}
         for p in _pattern_cache.values()
