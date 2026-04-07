@@ -26,7 +26,8 @@ from memory import get_relevant_memories, list_memories, write_memory, read_memo
 from search import web_search
 from tools import TOOL_DEFINITIONS, execute_tool
 from recite import fetch_recitation_content, build_recitation_context
-from session_memory import retrieve_relevant, format_recalled, store_turn, get_query_embedding, get_stored_embeddings, _cosine_sim
+import numpy as np
+from session_memory import retrieve_relevant, format_recalled, store_turn, get_query_embedding, get_stored_embeddings, cosine_sim
 from router import route
 from patterns import reload_patterns, list_patterns
 from tracker import router as tracker_router
@@ -319,13 +320,25 @@ async def prepare_recitation(route_result, log_prefix: str = "") -> tuple[str, f
     return "", 0.7
 
 
+async def prepare_query_embedding(user_text: str, history_len: int) -> bytes | None:
+    """Compute query embedding if conversation is long enough to benefit."""
+    if history_len <= 6:
+        return None
+    try:
+        return await asyncio.to_thread(get_query_embedding, user_text)
+    except Exception:
+        return None
+
+
 async def prepare_session_recall(conversation_id: str, user_text: str,
-                                  history_len: int, log_prefix: str = "") -> str:
+                                  history_len: int, log_prefix: str = "",
+                                  query_embedding: bytes | None = None) -> str:
     """Retrieve relevant earlier turns if conversation is long enough."""
     if history_len <= 15:
         return ""
     try:
-        recalled = await asyncio.to_thread(retrieve_relevant, conversation_id, user_text)
+        recalled = await asyncio.to_thread(
+            retrieve_relevant, conversation_id, user_text, query_embedding=query_embedding)
         if recalled:
             conv_log.info("%s Session recall: %d turns retrieved", log_prefix, len(recalled))
             return format_recalled(recalled)
@@ -397,8 +410,6 @@ def window_messages(history: list[dict], system_prompt: str, context_length: int
     # --- Smart windowing (semantic scoring) ---
     if query_embedding and conversation_id and len(history) > 6:
         try:
-            import numpy as np
-
             recent_count = min(6, len(history))
             recent = history[-recent_count:]
             recent_tokens = sum(estimate_tokens(m.get("content", "")) for m in recent)
@@ -417,7 +428,7 @@ def window_messages(history: list[dict], system_prompt: str, context_length: int
                 emb_bytes = emb_lookup.get(i)
                 if emb_bytes:
                     stored_vec = np.frombuffer(emb_bytes, dtype=np.float32)
-                    sim = _cosine_sim(query_vec, stored_vec)
+                    sim = cosine_sim(query_vec, stored_vec)
                 else:
                     sim = 0.0
                 scored.append((sim, i, msg, tokens))
@@ -434,8 +445,8 @@ def window_messages(history: list[dict], system_prompt: str, context_length: int
             kept_older.sort(key=lambda x: x[0])
             return [msg for _, msg in kept_older] + recent
 
-        except Exception:
-            pass  # Fall through to FIFO
+        except Exception as e:
+            error_log.debug("Smart windowing failed, using FIFO: %s", e)
 
     # --- FIFO fallback (drop oldest) ---
     kept: list[dict] = []
@@ -682,16 +693,12 @@ async def ws_chat(ws: WebSocket):
 
             recitation_context, llm_temperature = await prepare_recitation(route_result, f"[{trace_id}]")
 
-            session_recall = await prepare_session_recall(
-                conversation_id, user_text, len(history_msgs), f"[{trace_id}]")
+            # Compute query embedding once — shared by session recall and smart windowing
+            query_embedding = await prepare_query_embedding(user_text, len(history_msgs))
 
-            # Compute query embedding for smart windowing
-            query_embedding = None
-            if len(history_msgs) > 6:
-                try:
-                    query_embedding = await asyncio.to_thread(get_query_embedding, user_text)
-                except Exception:
-                    pass
+            session_recall = await prepare_session_recall(
+                conversation_id, user_text, len(history_msgs), f"[{trace_id}]",
+                query_embedding=query_embedding)
 
             # Build prompt with pattern (use cleaned text for memory retrieval)
             has_vision = bool(image_data or video_frames)
@@ -891,15 +898,11 @@ async def rest_chat(
 
     save_message(conversation_id, "user", clean_text)
 
-    session_recall = await prepare_session_recall(
-        conversation_id, clean_text, len(history_msgs), "[REST]")
+    query_embedding = await prepare_query_embedding(clean_text, len(history_msgs))
 
-    query_embedding = None
-    if len(history_msgs) > 6:
-        try:
-            query_embedding = await asyncio.to_thread(get_query_embedding, clean_text)
-        except Exception:
-            pass
+    session_recall = await prepare_session_recall(
+        conversation_id, clean_text, len(history_msgs), "[REST]",
+        query_embedding=query_embedding)
 
     system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
                                         recitation_context=recitation_context,

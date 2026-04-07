@@ -63,7 +63,7 @@ def get_stored_embeddings(conversation_id: str) -> dict[int, bytes]:
         return {}
 
 
-def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
+def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
     dot = np.dot(a, b)
     norm = np.linalg.norm(a) * np.linalg.norm(b)
     return float(dot / norm) if norm > 0 else 0.0
@@ -90,14 +90,19 @@ def store_turn(conversation_id: str, message_index: int, role: str, content: str
 
 
 def retrieve_relevant(conversation_id: str, query: str, top_k: int = 5,
-                      exclude_recent: int = 10) -> list[dict]:
+                      exclude_recent: int = 10,
+                      query_embedding: bytes | None = None) -> list[dict]:
     """Retrieve the most semantically relevant earlier turns from this conversation.
 
     Returns up to top_k results with similarity > 0.3, excluding the most recent
     `exclude_recent` turns (which are already in the sliding window).
+    If query_embedding is provided, skips re-embedding the query text.
     """
     try:
-        query_vec = np.frombuffer(embed_text(query), dtype=np.float32)
+        if query_embedding:
+            query_vec = np.frombuffer(query_embedding, dtype=np.float32)
+        else:
+            query_vec = np.frombuffer(embed_text(query), dtype=np.float32)
 
         conn = sqlite3.connect(str(DB_PATH))
         conn.row_factory = sqlite3.Row
@@ -121,7 +126,7 @@ def retrieve_relevant(conversation_id: str, query: str, top_k: int = 5,
         scored = []
         for row in candidates:
             stored_vec = np.frombuffer(row["embedding"], dtype=np.float32)
-            sim = _cosine_sim(query_vec, stored_vec)
+            sim = cosine_sim(query_vec, stored_vec)
             if sim > 0.3:
                 scored.append({
                     "message_index": row["message_index"],
