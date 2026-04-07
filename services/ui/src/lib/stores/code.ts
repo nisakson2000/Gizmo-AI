@@ -38,6 +38,18 @@ export const PLACEHOLDERS: Record<Language, string> = {
 // Per-language code persistence
 export const codeLanguage = persistedWritable<Language>('gizmo:code:lang', 'python');
 export const codeChatOpen = writable(false);
+export const splitPercent = persistedWritable<number>('gizmo:code:split', 55);
+export const wordWrap = persistedWritable<boolean>('gizmo:code:wrap', false);
+
+export const LANGUAGE_EXTENSIONS: Record<Language, string> = {
+	python: '.py', javascript: '.js', bash: '.sh', c: '.c', cpp: '.cpp',
+	go: '.go', lua: '.lua', html: '.html', css: '.css', svg: '.svg', markdown: '.md',
+};
+
+export const HLJS_NAMES: Record<Language, string> = {
+	python: 'python', javascript: 'javascript', bash: 'bash', c: 'c', cpp: 'cpp',
+	go: 'go', lua: 'lua', html: 'xml', css: 'css', svg: 'xml', markdown: 'markdown',
+};
 
 // Store code per language in localStorage
 export function saveCode(lang: Language, code: string) {
