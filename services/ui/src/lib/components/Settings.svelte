@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { thinkingEnabled, ttsEnabled, contextLength, settingsOpen, voiceStudioOpen, memoryManagerOpen, ttsVoiceId, ttsSpeed, ttsLanguage } from '$lib/stores/settings';
+	import { focusTrap } from '$lib/actions/focusTrap';
 	import { theme, themeOptions } from '$lib/stores/theme';
 	import type { ThemeName } from '$lib/stores/theme';
 	import { soundsEnabled, bootAnimationsEnabled } from '$lib/stores/sounds';
@@ -49,9 +50,9 @@
 		role="dialog"
 		aria-label="Settings"
 		onkeydown={(e) => { if (e.key === 'Escape') settingsOpen.set(false); }}
+		use:focusTrap
 	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="absolute inset-0" onclick={() => settingsOpen.set(false)}></div>
+		<button class="absolute inset-0 cursor-default" onclick={() => settingsOpen.set(false)} aria-label="Close settings"></button>
 		<div class="relative bg-bg-secondary border border-border/60 rounded-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto shadow-2xl">
 			<div class="flex items-center justify-between p-5 border-b border-border/40">
 				<h2 class="text-base font-semibold">Settings</h2>

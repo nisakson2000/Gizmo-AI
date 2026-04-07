@@ -9,6 +9,8 @@
 	import { connect, disconnect } from '$lib/ws/client';
 	import { loadConversations, newConversation, generating } from '$lib/stores/chat';
 	import { voiceStudioOpen, sidebarOpen, thinkingEnabled, memoryManagerOpen, focusTrigger } from '$lib/stores/settings';
+	import { swipe } from '$lib/actions/swipe';
+	import { get } from 'svelte/store';
 	import { theme } from '$lib/stores/theme';
 	import ConsoleButtons from '$lib/components/ConsoleButtons.svelte';
 
@@ -60,7 +62,10 @@
 	<title>Gizmo-AI</title>
 </svelte:head>
 
-<div class="console-frame flex flex-col flex-1 overflow-hidden">
+<div
+	class="console-frame flex flex-col flex-1 overflow-hidden"
+	use:swipe={{ onSwipeRight: () => sidebarOpen.set(true), onSwipeLeft: () => { if (get(sidebarOpen)) sidebarOpen.set(false); } }}
+>
 	{#if $theme !== 'default'}<div class="cd" aria-hidden="true"><span></span><span></span><span></span><span></span></div>{/if}
 	<ConsoleButtons />
 	{#if showHttpBanner}

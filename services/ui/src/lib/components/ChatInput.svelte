@@ -346,7 +346,7 @@
 				placeholder={$connectionStatus === 'connected' || $connectionStatus === 'generating' ? (pendingVideo ? 'Ask about the video...' : pendingImage ? 'Ask about the image...' : pendingFile ? 'Ask about the file...' : 'Message Gizmo...') : 'Connecting...'}
 				disabled={$connectionStatus === 'disconnected'}
 				rows="1"
-				class="flex-1 resize-none bg-transparent text-text-primary placeholder:text-text-dim focus:outline-none text-[15px] leading-[1.5] max-h-[200px] py-1 pl-1"
+				class="flex-1 resize-none bg-transparent text-text-primary placeholder:text-text-dim focus:outline-none text-[16px] leading-[1.5] max-h-[200px] py-1 pl-1"
 			></textarea>
 
 			<button

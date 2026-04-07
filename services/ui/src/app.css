@@ -246,10 +246,11 @@
 }
 
 .code-lang {
-	font-size: 0.7em;
+	font-size: 0.65em;
 	font-family: var(--font-mono);
-	color: var(--color-text-dim);
-	text-transform: lowercase;
+	color: var(--color-text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .code-copy {
@@ -307,5 +308,18 @@
 		bottom: 0;
 		z-index: 50;
 		width: 280px;
+	}
+
+	.sidebar-overlay {
+		appearance: none;
+		border: none;
+		padding: 0;
+		cursor: default;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.msg-appear, .thinking-dot, .thinking-pulse, .streaming-cursor, .toast-appear {
+		animation: none !important;
 	}
 }

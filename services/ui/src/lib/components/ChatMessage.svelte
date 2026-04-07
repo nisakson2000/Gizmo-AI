@@ -200,7 +200,7 @@
 {#if message.role === 'user'}
 	<!-- User message: right-aligned, accent tinted -->
 	<div class="flex justify-end mb-5 group">
-		<div class="max-w-[75%]">
+		<div class="max-w-[85%] sm:max-w-[75%] lg:max-w-[65%]">
 			<div class="bg-user-msg rounded-2xl rounded-br-md px-4 py-2.5">
 				{#if message.videoUrl}
 					<video
@@ -235,7 +235,7 @@
 				{/if}
 			</div>
 			{#if !editing && !$generating}
-				<div class="flex justify-end items-center gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+				<div class="flex justify-end items-center gap-3 mt-1 opacity-0 group-hover:opacity-100 max-sm:opacity-50 transition-opacity">
 					{#if message.variants && message.variants.length > 1}
 						<div class="flex items-center gap-1 text-xs text-text-dim">
 							<button
@@ -303,7 +303,7 @@
 		{/if}
 
 		<!-- Actions row: visible on hover -->
-		<div class="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+		<div class="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 max-sm:opacity-50 transition-opacity">
 			<button
 				onclick={copyMessage}
 				class="text-xs text-text-dim hover:text-text-secondary transition-colors flex items-center gap-1"

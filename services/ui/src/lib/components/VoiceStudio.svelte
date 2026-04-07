@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { focusTrap } from '$lib/actions/focusTrap';
+
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
 	interface SavedVoice {
@@ -173,15 +175,14 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
 		role="dialog"
 		aria-label="Voice Studio"
 		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
+		use:focusTrap
 	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="absolute inset-0" onclick={close}></div>
+		<button class="absolute inset-0 cursor-default" onclick={close} aria-label="Close voice studio"></button>
 		<div class="relative bg-bg-secondary border border-border/60 rounded-2xl w-full max-w-lg mx-4 shadow-2xl max-h-[85vh] overflow-y-auto">
 			<!-- Header -->
 			<div class="flex items-center justify-between p-5 border-b border-border/40">

@@ -42,6 +42,8 @@
 <div class="mb-2 rounded border border-border bg-bg-tertiary/50">
 	<button
 		onclick={() => { if (result) expanded = !expanded; }}
+		aria-expanded={expanded}
+		aria-label={tool}
 		class="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
 	>
 		{#if status !== 'done'}

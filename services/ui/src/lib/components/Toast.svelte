@@ -3,7 +3,7 @@
 </script>
 
 {#if $toasts.length > 0}
-	<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+	<div class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2">
 		{#each $toasts as t (t.id)}
 			<div
 				class="flex items-center gap-2 px-4 py-2.5 rounded-lg border shadow-lg text-sm min-w-[240px] max-w-[380px] toast-appear

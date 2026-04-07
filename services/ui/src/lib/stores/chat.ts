@@ -57,6 +57,8 @@ export const generatingConversationId = writable<string | null>(null);
 export const pendingVariants = writable<MessageVariant[]>([]);
 export const pendingPromptIndex = writable<number>(0);
 export const pendingTtsInfo = writable<string>('');
+export const loadingConversation = writable(false);
+export const conversationsLoaded = writable(false);
 
 // Derived: ID of the last assistant message (avoids O(N) scan per ChatMessage)
 export const lastAssistantId = derived(messages, ($msgs) => {
@@ -143,14 +145,17 @@ export async function loadConversations() {
 		if (resp.ok) {
 			const data = await resp.json();
 			conversations.set(data);
+			conversationsLoaded.set(true);
 		}
 	} catch {
+		conversationsLoaded.set(true);
 		const { toast } = await import('./toast');
 		toast('Could not load conversations — orchestrator may be down', 'error');
 	}
 }
 
 export async function loadConversation(id: string) {
+	loadingConversation.set(true);
 	try {
 		const resp = await fetch(`/api/conversations/${id}`);
 		if (resp.ok) {
@@ -176,6 +181,8 @@ export async function loadConversation(id: string) {
 		}
 	} catch {
 		// Service unavailable
+	} finally {
+		loadingConversation.set(false);
 	}
 }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import { tick } from 'svelte';
-	import { messages, generating, streamingThinking, streamingContent, streamingToolCalls, activeConversationId, generatingConversationId } from '$lib/stores/chat';
+	import { messages, generating, streamingThinking, streamingContent, streamingToolCalls, activeConversationId, generatingConversationId, loadingConversation } from '$lib/stores/chat';
 	import { pendingSuggestion, voiceStudioOpen } from '$lib/stores/settings';
 	import { sanitize } from '$lib/utils/sanitize';
 	import { highlightCode } from '$lib/actions/highlight';
@@ -36,6 +36,19 @@
 	let userScrolled = $state(false);
 	let parsedStreamingHtml = $state('');
 	let parseTimer: ReturnType<typeof setTimeout> | null = null;
+	let showLoadingSpinner = $state(false);
+	let loadingTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Show spinner after 150ms delay to avoid flash on fast loads
+	$effect(() => {
+		if ($loadingConversation) {
+			loadingTimer = setTimeout(() => { showLoadingSpinner = true; }, 150);
+		} else {
+			if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null; }
+			showLoadingSpinner = false;
+		}
+		return () => { if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null; } };
+	});
 
 	function scrollToBottom() {
 		if (chatContainer && !userScrolled) {
@@ -103,9 +116,16 @@
 <div
 	bind:this={chatContainer}
 	onscroll={handleScroll}
-	class="flex-1 overflow-y-auto"
+	class="flex-1 overflow-y-auto relative"
 >
-	{#if $messages.length === 0 && !$generating}
+	{#if showLoadingSpinner && $messages.length === 0}
+		<div class="flex items-center justify-center h-full">
+			<svg class="w-6 h-6 text-accent animate-spin" fill="none" viewBox="0 0 24 24">
+				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+			</svg>
+		</div>
+	{:else if $messages.length === 0 && !$generating}
 		<!-- Empty state -->
 		<div class="flex flex-col items-center justify-center h-full text-center px-4">
 			<div class="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-5">
@@ -121,7 +141,7 @@
 				{#each suggestions as s}
 					<button
 						onclick={() => useSuggestion(s.prompt)}
-						class="bg-bg-secondary/60 border border-border/50 rounded-xl px-4 py-3 text-left hover:border-accent/40 hover:bg-bg-secondary transition-all cursor-pointer"
+						class="bg-bg-secondary/60 border border-border/50 rounded-xl px-4 py-3 text-left hover:border-accent/40 hover:bg-bg-secondary hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
 					>
 						<div class="flex items-center gap-2 mb-1">
 							{#if s.icon === 'eye'}
@@ -150,8 +170,8 @@
 		</div>
 	{:else}
 		<div class="max-w-3xl mx-auto px-4 py-6">
-			{#each $messages as message (message.id)}
-				<div class="msg-appear" data-role={message.role}>
+			{#each $messages as message, i (message.id)}
+				<div class={$messages.length <= 20 || i >= $messages.length - 3 ? 'msg-appear' : ''} data-role={message.role}>
 					<ChatMessage {message} />
 				</div>
 			{/each}
@@ -184,5 +204,17 @@
 				</div>
 			{/if}
 		</div>
+	{/if}
+
+	{#if userScrolled}
+		<button
+			onclick={() => { userScrolled = false; scrollToBottom(); }}
+			class="absolute bottom-6 right-6 z-10 w-9 h-9 rounded-full bg-accent text-white shadow-lg flex items-center justify-center hover:bg-accent-dim transition-opacity duration-200"
+			aria-label="Scroll to bottom"
+		>
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+			</svg>
+		</button>
 	{/if}
 </div>

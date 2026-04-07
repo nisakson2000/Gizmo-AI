@@ -12,6 +12,7 @@
 	<div class="mb-2 rounded border border-thinking-border bg-thinking/30">
 		<button
 			onclick={() => (expanded = !expanded)}
+			aria-expanded={expanded}
 			class="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
 		>
 			<svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
