@@ -7,10 +7,14 @@
 		selectedTaskId,
 		selectedNoteId,
 		trackerChatOpen,
+		taskFilter,
 		loadTasks,
 		loadNotes,
 		loadTags,
+		updateTask,
+		completeTask,
 	} from '$lib/stores/tracker';
+	import { get } from 'svelte/store';
 	import { connectTracker, disconnectTracker } from '$lib/ws/tracker-client';
 
 	import QuickAdd from '$lib/components/tracker/QuickAdd.svelte';
@@ -31,15 +35,71 @@
 	let showTaskDetail = $derived($activeTab === 'tasks' && $selectedTaskId !== null);
 	let showNoteEditor = $derived($activeTab === 'notes' && $selectedNoteId !== null);
 
+	// Keyboard nav state — exported for TaskList/TaskItem to read
+	let focusedTaskIndex = $state(-1);
+	let visibleTasks = $derived($tasks.filter(t => !t.parent_id));
+
+	// Reset focus when filter/tab changes
+	$effect(() => {
+		$taskFilter;
+		$activeTab;
+		focusedTaskIndex = -1;
+	});
+
+	function handleTrackerKeydown(e: KeyboardEvent) {
+		if ($activeTab !== 'tasks') return;
+		const tag = (e.target as HTMLElement)?.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+		if (e.key === 'n') {
+			e.preventDefault();
+			document.querySelector<HTMLInputElement>('.quick-add-input')?.focus();
+			return;
+		}
+		if (e.key === '/') {
+			e.preventDefault();
+			document.querySelector<HTMLInputElement>('.task-search-input')?.focus();
+			return;
+		}
+		if (e.key === 'j' || e.key === 'ArrowDown') {
+			e.preventDefault();
+			if (focusedTaskIndex < visibleTasks.length - 1) focusedTaskIndex++;
+			return;
+		}
+		if (e.key === 'k' || e.key === 'ArrowUp') {
+			e.preventDefault();
+			if (focusedTaskIndex > 0) focusedTaskIndex--;
+			return;
+		}
+		if (e.key === 'Enter' && focusedTaskIndex >= 0) {
+			e.preventDefault();
+			const task = visibleTasks[focusedTaskIndex];
+			if (task) selectedTaskId.set(task.id);
+			return;
+		}
+		if (e.key === 'x' && focusedTaskIndex >= 0) {
+			e.preventDefault();
+			const task = visibleTasks[focusedTaskIndex];
+			if (!task) return;
+			if (task.status === 'todo') updateTask(task.id, { status: 'in_progress' });
+			else if (task.status === 'in_progress') completeTask(task.id);
+			else if (task.status === 'done') updateTask(task.id, { status: 'todo' });
+			else if (task.status === 'blocked') updateTask(task.id, { status: 'todo' });
+			return;
+		}
+	}
+
 	onMount(() => {
 		loadTasks();
 		loadNotes();
 		loadTags();
 		connectTracker();
+		document.addEventListener('keydown', handleTrackerKeydown);
 	});
 
 	onDestroy(() => {
 		disconnectTracker();
+		document.removeEventListener('keydown', handleTrackerKeydown);
 	});
 </script>
 
@@ -117,11 +177,15 @@
 	<div class="console-screen flex-1 overflow-hidden relative">
 		<!-- Full-width scrollable list -->
 		<div class="h-full overflow-y-auto">
-			{#if $activeTab === 'tasks'}
-				<TaskList />
-			{:else}
-				<NoteList />
-			{/if}
+			{#key $activeTab}
+				<div class="tab-fade">
+					{#if $activeTab === 'tasks'}
+						<TaskList {focusedTaskIndex} />
+					{:else}
+						<NoteList />
+					{/if}
+				</div>
+			{/key}
 		</div>
 
 		<!-- Overlay: Task Detail -->
@@ -157,6 +221,14 @@
 </div>
 
 <style>
+	@keyframes tabFade {
+		from { opacity: 0; transform: translateY(4px); }
+		to { opacity: 1; transform: none; }
+	}
+	.tab-fade {
+		animation: tabFade 0.15s ease-out;
+	}
+
 	@keyframes overlayFade {
 		from { opacity: 0; }
 		to { opacity: 1; }

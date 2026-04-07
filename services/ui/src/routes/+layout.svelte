@@ -7,6 +7,7 @@
 	import BootSequence from '$lib/components/BootSequence.svelte';
 	import { theme } from '$lib/stores/theme';
 	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, codePlaygroundOpen, sidebarOpen } from '$lib/stores/settings';
+	import { trackerChatOpen, selectedTaskId, selectedNoteId } from '$lib/stores/tracker';
 
 	let { children } = $props();
 
@@ -26,6 +27,9 @@
 			if ($voiceStudioOpen) { voiceStudioOpen.set(false); e.preventDefault(); return; }
 			if ($memoryManagerOpen) { memoryManagerOpen.set(false); e.preventDefault(); return; }
 			if ($codePlaygroundOpen) { codePlaygroundOpen.set(false); e.preventDefault(); return; }
+			if ($trackerChatOpen) { trackerChatOpen.set(false); e.preventDefault(); return; }
+			if ($selectedTaskId) { selectedTaskId.set(null); e.preventDefault(); return; }
+			if ($selectedNoteId) { selectedNoteId.set(null); e.preventDefault(); return; }
 			if ($sidebarOpen) { sidebarOpen.set(false); e.preventDefault(); return; }
 		}
 	}

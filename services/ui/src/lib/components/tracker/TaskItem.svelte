@@ -2,7 +2,7 @@
 	import { selectedTaskId, completeTask, updateTask, deleteTask, tasks } from '$lib/stores/tracker';
 	import type { Task } from '$lib/stores/tracker';
 
-	let { task, subtasks = [], depth = 0 }: { task: Task; subtasks?: Task[]; depth?: number } = $props();
+	let { task, subtasks = [], depth = 0, focused = false }: { task: Task; subtasks?: Task[]; depth?: number; focused?: boolean } = $props();
 
 	const priorityColors: Record<string, string> = {
 		urgent: 'var(--color-error)',
@@ -17,6 +17,16 @@
 
 	let isSelected = $derived($selectedTaskId === task.id);
 	let doneSubtasks = $derived(subtasks.filter(s => s.status === 'done').length);
+	let subtasksExpanded = $state(false);
+	let editingTitle = $state(false);
+	let editTitle = $state('');
+	let itemEl: HTMLDivElement;
+
+	$effect(() => {
+		if (focused && itemEl) {
+			itemEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		}
+	});
 
 	async function cycleStatus() {
 		if (task.status === 'todo') {
@@ -47,8 +57,10 @@
 </script>
 
 <div
+	bind:this={itemEl}
 	class="group mx-4 my-1.5 rounded-lg border transition-all cursor-pointer
 		{isOverdue ? 'ring-1 ring-error/15' : ''}
+		{focused ? 'ring-2 ring-accent/30' : ''}
 		{isSelected ? 'bg-bg-hover/80 border-accent/40 shadow-sm' : 'border-border/20 hover:border-border/40 hover:shadow-sm'}"
 	style="border-left: 3px solid {priorityColors[task.priority]};{depth > 0 ? ` margin-left: ${depth * 20}px` : ''}"
 	role="button"
@@ -81,18 +93,50 @@
 		</button>
 
 		<!-- Title -->
-		<span class="flex-1 text-sm truncate {task.status === 'done' ? 'line-through text-text-dim' : 'text-text-primary'}">
-			{task.title}
-		</span>
+		{#if editingTitle}
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				type="text"
+				bind:value={editTitle}
+				autofocus
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						const trimmed = editTitle.trim();
+						if (trimmed && trimmed !== task.title) updateTask(task.id, { title: trimmed });
+						editingTitle = false;
+					} else if (e.key === 'Escape') {
+						editingTitle = false;
+					}
+				}}
+				onblur={() => {
+					const trimmed = editTitle.trim();
+					if (trimmed && trimmed !== task.title) updateTask(task.id, { title: trimmed });
+					editingTitle = false;
+				}}
+				class="flex-1 text-sm bg-bg-primary border border-accent/40 rounded px-1.5 py-0.5 text-text-primary focus:outline-none min-w-0"
+			/>
+		{:else}
+			<span
+				class="flex-1 text-sm truncate {task.status === 'done' ? 'line-through text-text-dim' : 'text-text-primary'}"
+				ondblclick={(e) => { e.stopPropagation(); editTitle = task.title; editingTitle = true; }}
+			>
+				{task.title}
+			</span>
+		{/if}
 
 		<!-- Subtask progress -->
 		{#if subtasks.length > 0}
-			<span class="shrink-0 text-[11px] text-text-dim flex items-center gap-0.5">
+			<button
+				onclick={(e) => { e.stopPropagation(); subtasksExpanded = !subtasksExpanded; }}
+				class="shrink-0 text-[11px] text-text-dim flex items-center gap-0.5 hover:text-text-secondary transition-colors"
+			>
 				{doneSubtasks}/{subtasks.length}
-				<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg class="w-3 h-3 transition-transform duration-200 {subtasksExpanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 				</svg>
-			</span>
+			</button>
 		{/if}
 
 		<!-- Recurrence badge -->
@@ -118,7 +162,7 @@
 		<!-- Delete (on hover) -->
 		<button
 			onclick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-			class="shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-text-dim hover:text-error transition-all p-0.5"
+			class="shrink-0 opacity-0 group-hover:opacity-60 max-sm:opacity-40 hover:!opacity-100 text-text-dim hover:text-error transition-all p-0.5"
 			title="Delete"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,6 +173,8 @@
 </div>
 
 <!-- Subtasks -->
-{#each subtasks as sub (sub.id)}
-	<svelte:self task={sub} subtasks={getChildSubtasks(sub.id)} depth={depth + 1} />
-{/each}
+{#if subtasksExpanded}
+	{#each subtasks as sub (sub.id)}
+		<svelte:self task={sub} subtasks={getChildSubtasks(sub.id)} depth={depth + 1} />
+	{/each}
+{/if}

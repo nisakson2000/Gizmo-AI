@@ -3,6 +3,8 @@
 	import type { Task } from '$lib/stores/tracker';
 	import TaskItem from './TaskItem.svelte';
 
+	let { focusedTaskIndex = -1 }: { focusedTaskIndex?: number } = $props();
+
 	const statusOptions = [
 		{ value: '', label: 'All' },
 		{ value: 'todo', label: 'Todo' },
@@ -14,6 +16,7 @@
 	const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 	let tagDropdownOpen = $state(false);
+	let searchQuery = $state('');
 
 	function getStatusCount(statusValue: string): number {
 		const all = $tasks.filter(t => !t.parent_id);
@@ -27,6 +30,14 @@
 		if (f.status) list = list.filter(t => t.status === f.status);
 		if (f.priority) list = list.filter(t => t.priority === f.priority);
 		if (f.tag) list = list.filter(t => t.tags?.includes(f.tag));
+		if (searchQuery.trim()) {
+			const q = searchQuery.toLowerCase();
+			list = list.filter(t =>
+				t.title.toLowerCase().includes(q) ||
+				t.description.toLowerCase().includes(q) ||
+				t.tags?.some(tag => tag.toLowerCase().includes(q))
+			);
+		}
 
 		list.sort((a, b) => {
 			if (f.sort === 'due') {
@@ -69,6 +80,15 @@
 
 <!-- Filter bar -->
 <div class="flex items-center gap-2 mx-4 mt-2 mb-1 px-3 py-2 bg-bg-tertiary/40 rounded-lg border border-border/20">
+	<svg class="w-3.5 h-3.5 text-text-dim/50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+	</svg>
+	<input
+		bind:value={searchQuery}
+		placeholder="Search tasks..."
+		class="task-search-input w-24 sm:w-32 bg-transparent text-text-primary text-sm outline-none placeholder:text-text-dim/40"
+	/>
+	<div class="w-px h-4 bg-border/30"></div>
 	<div class="flex gap-0.5 bg-bg-primary/50 rounded-lg p-0.5">
 		{#each statusOptions as opt}
 			<button
@@ -136,17 +156,33 @@
 
 <!-- Task list -->
 <div class="py-1">
-	{#each filtered as task (task.id)}
-		<TaskItem {task} subtasks={getSubtasks(task.id)} depth={0} />
+	{#each filtered as task, i (task.id)}
+		<TaskItem {task} subtasks={getSubtasks(task.id)} depth={0} focused={i === focusedTaskIndex} />
 	{:else}
-		<div class="flex flex-col items-center justify-center py-20 text-text-dim">
-			<div class="w-16 h-16 rounded-2xl bg-bg-tertiary/50 border border-border/20 flex items-center justify-center mb-4">
-				<svg class="w-7 h-7 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-				</svg>
+		{#if $tasks.length > 0 && filtered.length === 0}
+			<div class="flex flex-col items-center justify-center py-20 text-text-dim">
+				<p class="text-sm font-medium text-text-secondary">No matching tasks</p>
+				<p class="text-xs mt-1.5 text-text-dim/50">Try adjusting your filters or search query</p>
+				<button
+					onclick={() => { taskFilter.set({ status: '', priority: '', tag: '', sort: 'priority' }); searchQuery = ''; }}
+					class="mt-3 px-3 py-1.5 text-xs font-medium text-accent hover:text-accent-dim transition-colors"
+				>Clear filters</button>
 			</div>
-			<p class="text-sm font-medium text-text-secondary">No tasks yet</p>
-			<p class="text-xs mt-1.5 text-text-dim/50 max-w-[200px] text-center">Type a title above and press Enter to create your first task</p>
-		</div>
+		{:else}
+			<div class="flex flex-col items-center justify-center py-20 text-text-dim">
+				<div class="w-16 h-16 rounded-2xl bg-bg-tertiary/50 border border-border/20 flex items-center justify-center mb-4">
+					<svg class="w-7 h-7 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+					</svg>
+				</div>
+				<p class="text-sm font-medium text-text-secondary">No tasks yet</p>
+				<p class="text-xs mt-1.5 text-text-dim/50 max-w-[240px] text-center">Type a title above and press Enter, or try one of these:</p>
+				<div class="flex flex-col gap-1.5 mt-3">
+					<button onclick={() => document.querySelector<HTMLInputElement>('.quick-add-input')?.focus()} class="text-xs text-accent hover:text-accent-dim transition-colors">"Buy groceries"</button>
+					<button onclick={() => document.querySelector<HTMLInputElement>('.quick-add-input')?.focus()} class="text-xs text-accent hover:text-accent-dim transition-colors">"Review pull request #42"</button>
+					<button onclick={() => document.querySelector<HTMLInputElement>('.quick-add-input')?.focus()} class="text-xs text-accent hover:text-accent-dim transition-colors">"Plan weekend trip"</button>
+				</div>
+			</div>
+		{/if}
 	{/each}
 </div>

@@ -25,6 +25,12 @@
 					</svg>
 				{/if}
 				<span class="flex-1">{t.message}</span>
+				{#if t.action}
+					<button
+						onclick={() => { t.action?.onclick(); dismissToast(t.id); }}
+						class="flex-shrink-0 text-accent underline underline-offset-2 hover:text-accent-dim transition-colors font-medium"
+					>{t.action.label}</button>
+				{/if}
 				<button
 					onclick={() => dismissToast(t.id)}
 					class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"

@@ -3,6 +3,7 @@
 	import { marked } from 'marked';
 	import { sanitize } from '$lib/utils/sanitize';
 	import { trackerChatOpen } from '$lib/stores/tracker';
+	import ThinkingBlock from '$lib/components/ThinkingBlock.svelte';
 	import {
 		trackerMessages,
 		trackerGenerating,
@@ -79,8 +80,8 @@
 					</div>
 				{:else}
 					{#if msg.thinking}
-						<div class="text-[10px] text-text-dim italic bg-thinking border-l-2 border-thinking-border rounded px-2 py-1 max-w-[90%]">
-							{msg.thinking.length > 120 ? msg.thinking.slice(0, 120) + '...' : msg.thinking}
+						<div class="max-w-[90%]">
+							<ThinkingBlock content={msg.thinking} />
 						</div>
 					{/if}
 					{#if msg.toolCalls}
@@ -109,8 +110,8 @@
 		{#if $trackerGenerating}
 			<div class="flex flex-col gap-1 items-start">
 				{#if $trackerStreamingThinking}
-					<div class="text-[10px] text-text-dim italic bg-thinking border-l-2 border-thinking-border rounded px-2 py-1 max-w-[90%]">
-						{$trackerStreamingThinking.length > 120 ? $trackerStreamingThinking.slice(0, 120) + '...' : $trackerStreamingThinking}
+					<div class="max-w-[90%]">
+						<ThinkingBlock content={$trackerStreamingThinking} streaming={true} />
 					</div>
 				{/if}
 				{#if $trackerStreamingContent}
@@ -145,8 +146,8 @@
 					{inputText.trim() && !$trackerGenerating ? 'bg-accent text-bg-primary hover:bg-accent-dim' : 'bg-bg-tertiary text-text-dim cursor-not-allowed'}"
 				aria-label="Send"
 			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-7 7m7-7l7 7" />
+				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+					<path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
 				</svg>
 			</button>
 		</div>

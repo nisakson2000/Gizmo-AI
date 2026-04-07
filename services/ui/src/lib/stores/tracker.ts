@@ -120,21 +120,41 @@ export async function completeTask(id: string) {
 	}
 }
 
-export async function deleteTask(id: string) {
-	try {
-		const resp = await fetch(`/api/tracker/tasks/${id}`, {
-			method: 'DELETE',
-		});
-		if (resp.ok) {
-			tasks.update((t) => t.filter((task) => task.id !== id));
-			if (get(selectedTaskId) === id) {
-				selectedTaskId.set(null);
-			}
-			await loadTags();
-		}
-	} catch {
-		toast('Tracker service unavailable', 'error');
+const pendingDeletes = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function deleteTask(id: string) {
+	// Optimistic removal from UI
+	tasks.update((t) => t.filter((task) => task.id !== id));
+	if (get(selectedTaskId) === id) {
+		selectedTaskId.set(null);
 	}
+
+	// Cancel any existing pending delete for this id
+	const existing = pendingDeletes.get(id);
+	if (existing) clearTimeout(existing);
+
+	// Schedule actual API delete after 5 seconds
+	const timer = setTimeout(async () => {
+		pendingDeletes.delete(id);
+		try {
+			await fetch(`/api/tracker/tasks/${id}`, { method: 'DELETE' });
+			await loadTags();
+		} catch {
+			toast('Failed to delete task', 'error');
+			await loadTasks();
+		}
+	}, 5000);
+	pendingDeletes.set(id, timer);
+
+	// Show toast with undo action
+	toast('Task deleted', 'info', 5000, {
+		label: 'Undo',
+		onclick: () => {
+			clearTimeout(timer);
+			pendingDeletes.delete(id);
+			loadTasks();
+		},
+	});
 }
 
 // ── Note API ──────────────────────────────────────────────────────────

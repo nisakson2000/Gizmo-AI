@@ -76,7 +76,7 @@
 		</div>
 
 		<!-- Actions (hover) -->
-		<div class="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+		<div class="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 max-sm:opacity-40 transition-opacity">
 			<button
 				onclick={togglePin}
 				class="p-1 text-text-dim hover:text-accent transition-colors rounded"
