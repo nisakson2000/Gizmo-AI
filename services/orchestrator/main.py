@@ -194,6 +194,7 @@ def prune_conversations():
         ids = [r[0] for r in old_ids]
         placeholders = ",".join("?" * len(ids))
         conn.execute(f"DELETE FROM messages WHERE conversation_id IN ({placeholders})", ids)
+        conn.execute(f"DELETE FROM session_embeddings WHERE conversation_id IN ({placeholders})", ids)
         conn.execute(f"DELETE FROM conversations WHERE id IN ({placeholders})", ids)
         conn.commit()
         conn.execute("VACUUM")
@@ -320,6 +321,22 @@ async def prepare_recitation(route_result, log_prefix: str = "") -> tuple[str, f
     return "", 0.7
 
 
+def _extract_text(content) -> str:
+    """Extract text from a message content field (handles multimodal arrays)."""
+    if isinstance(content, list):
+        return "".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return str(content) if content else ""
+
+
+def _prewarm_embeddings():
+    """Load the fastembed model at startup so the first request isn't slow."""
+    try:
+        get_query_embedding("warmup")
+        conv_log.info("Embedding model pre-warmed")
+    except Exception as e:
+        error_log.debug("Embedding pre-warm failed (non-critical): %s", e)
+
+
 async def prepare_query_embedding(user_text: str, history_len: int) -> bytes | None:
     """Compute query embedding if conversation is long enough to benefit."""
     if history_len <= 6:
@@ -329,22 +346,6 @@ async def prepare_query_embedding(user_text: str, history_len: int) -> bytes | N
     except Exception:
         return None
 
-
-async def prepare_session_recall(conversation_id: str, user_text: str,
-                                  history_len: int, log_prefix: str = "",
-                                  query_embedding: bytes | None = None) -> str:
-    """Retrieve relevant earlier turns if conversation is long enough."""
-    if history_len <= 15:
-        return ""
-    try:
-        recalled = await asyncio.to_thread(
-            retrieve_relevant, conversation_id, user_text, query_embedding=query_embedding)
-        if recalled:
-            conv_log.info("%s Session recall: %d turns retrieved", log_prefix, len(recalled))
-            return format_recalled(recalled)
-    except Exception as e:
-        error_log.debug("Session recall failed: %s", e)
-    return ""
 
 
 def _count_messages(conversation_id: str) -> int:
@@ -498,6 +499,7 @@ async def lifespan(app: FastAPI):
     prune_conversations()
     reload_patterns()
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    asyncio.create_task(asyncio.to_thread(_prewarm_embeddings))
     yield
 
 
@@ -696,23 +698,40 @@ async def ws_chat(ws: WebSocket):
             # Compute query embedding once — shared by session recall and smart windowing
             query_embedding = await prepare_query_embedding(user_text, len(history_msgs))
 
-            session_recall = await prepare_session_recall(
-                conversation_id, user_text, len(history_msgs), f"[{trace_id}]",
-                query_embedding=query_embedding)
+            # Retrieve relevant earlier turns (raw list, not yet formatted)
+            recalled_turns = []
+            if len(history_msgs) > 15 and query_embedding:
+                try:
+                    recalled_turns = await asyncio.to_thread(
+                        retrieve_relevant, conversation_id, user_text, query_embedding=query_embedding)
+                    if recalled_turns:
+                        conv_log.info("[%s] Session recall: %d turns retrieved", trace_id, len(recalled_turns))
+                except Exception as e:
+                    error_log.debug("Session recall retrieval failed: %s", e)
 
-            # Build prompt with pattern (use cleaned text for memory retrieval)
             has_vision = bool(image_data or video_frames)
-            system_prompt = build_system_prompt(
-                clean_text,
-                has_vision=has_vision,
-                pattern=route_result.pattern,
-                recitation_context=recitation_context,
-                session_recall=session_recall,
-                charmap_content=route_result.charmap_content,
-            )
-            history_msgs = window_messages(history_msgs, system_prompt, context_length,
+
+            # Window first (needs to run before session recall formatting to deduplicate)
+            temp_prompt = build_system_prompt(
+                clean_text, has_vision=has_vision, pattern=route_result.pattern,
+                recitation_context=recitation_context, charmap_content=route_result.charmap_content)
+            history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                            query_embedding=query_embedding,
                                            conversation_id=conversation_id)
+
+            # Format session recall — exclude turns whose content is already in the window
+            session_recall = ""
+            if recalled_turns:
+                windowed_contents = {_extract_text(m.get("content", ""))[:200] for m in history_msgs}
+                deduped = [t for t in recalled_turns if _extract_text(t["content"])[:200] not in windowed_contents]
+                if deduped:
+                    session_recall = format_recalled(deduped)
+
+            # Final system prompt with session recall included
+            system_prompt = build_system_prompt(
+                clean_text, has_vision=has_vision, pattern=route_result.pattern,
+                recitation_context=recitation_context, session_recall=session_recall,
+                charmap_content=route_result.charmap_content)
             messages = build_messages(history_msgs, system_prompt)
 
             # Stream with selected tools
@@ -900,18 +919,35 @@ async def rest_chat(
 
     query_embedding = await prepare_query_embedding(clean_text, len(history_msgs))
 
-    session_recall = await prepare_session_recall(
-        conversation_id, clean_text, len(history_msgs), "[REST]",
-        query_embedding=query_embedding)
+    recalled_turns = []
+    if len(history_msgs) > 15 and query_embedding:
+        try:
+            recalled_turns = await asyncio.to_thread(
+                retrieve_relevant, conversation_id, clean_text, query_embedding=query_embedding)
+            if recalled_turns:
+                conv_log.info("[REST] Session recall: %d turns retrieved", len(recalled_turns))
+        except Exception as e:
+            error_log.debug("Session recall retrieval failed: %s", e)
+
+    temp_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
+                                      recitation_context=recitation_context,
+                                      charmap_content=route_result.charmap_content)
+    context_length = max(2048, min(context_length, 131072))
+    history_msgs = window_messages(history_msgs, temp_prompt, context_length,
+                                   query_embedding=query_embedding,
+                                   conversation_id=conversation_id)
+
+    session_recall = ""
+    if recalled_turns:
+        windowed_contents = {str(m.get("content", ""))[:200] for m in history_msgs}
+        deduped = [t for t in recalled_turns if t["content"][:200] not in windowed_contents]
+        if deduped:
+            session_recall = format_recalled(deduped)
 
     system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
                                         recitation_context=recitation_context,
                                         session_recall=session_recall,
                                         charmap_content=route_result.charmap_content)
-    context_length = max(2048, min(context_length, 131072))
-    history_msgs = window_messages(history_msgs, system_prompt, context_length,
-                                   query_embedding=query_embedding,
-                                   conversation_id=conversation_id)
     messages = build_messages(history_msgs, system_prompt)
 
     full_response = ""
@@ -1260,6 +1296,7 @@ async def delete_conversation(conv_id: str):
     conn = get_db()
     try:
         conn.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
+        conn.execute("DELETE FROM session_embeddings WHERE conversation_id = ?", (conv_id,))
         conn.execute("DELETE FROM conversations WHERE id = ?", (conv_id,))
         conn.commit()
     finally:
@@ -1286,6 +1323,10 @@ async def delete_messages_from(conv_id: str, index: int):
         ids_to_delete = [r["id"] for r in rows[index:]]
         placeholders = ",".join("?" * len(ids_to_delete))
         conn.execute(f"DELETE FROM messages WHERE id IN ({placeholders})", ids_to_delete)
+        conn.execute(
+            "DELETE FROM session_embeddings WHERE conversation_id = ? AND message_index >= ?",
+            (conv_id, index),
+        )
         conn.commit()
     finally:
         conn.close()

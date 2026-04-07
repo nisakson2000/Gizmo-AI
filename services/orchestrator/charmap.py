@@ -5,13 +5,14 @@ from collections import Counter
 
 _CHARMAP_PATTERNS = [
     # "how many X in Y" / "how many X's in Y" / "how many X are in Y"
-    re.compile(r"how\s+many\s+(?P<letter>[a-zA-Z])(?:'?s)?\s+(?:are\s+)?in\s+[\"']?(?P<word>\w+)[\"']?", re.I),
+    # Handles: "in strawberry", "in 'coffee'", "in the word 'coffee'"
+    re.compile(r"how\s+many\s+(?P<letter>[a-zA-Z])(?:'?s)?\s+(?:are\s+)?in\s+(?:the\s+word\s+)?[\"']?(?P<word>\w+)[\"']?\s*\??$", re.I),
     # "count the letters in X" / "count the characters in X"
-    re.compile(r"count\s+(?:the\s+)?(?:letters?|characters?)\s+in\s+[\"']?(?P<word>\w+)[\"']?", re.I),
+    re.compile(r"count\s+(?:the\s+)?(?:letters?|characters?)\s+in\s+(?:the\s+word\s+)?[\"']?(?P<word>\w+)[\"']?\s*\??$", re.I),
     # "spell X" / "spell out X"
-    re.compile(r"spell\s+(?:out\s+)?[\"']?(?P<word>\w+)[\"']?", re.I),
+    re.compile(r"spell\s+(?:out\s+)?[\"']?(?P<word>\w+)[\"']?\s*\??$", re.I),
     # "what letters are in X"
-    re.compile(r"what\s+letters?\s+(?:are\s+)?in\s+[\"']?(?P<word>\w+)[\"']?", re.I),
+    re.compile(r"what\s+letters?\s+(?:are\s+)?in\s+(?:the\s+word\s+)?[\"']?(?P<word>\w+)[\"']?\s*\??$", re.I),
 ]
 
 

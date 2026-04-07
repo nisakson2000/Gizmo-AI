@@ -86,7 +86,7 @@ def store_turn(conversation_id: str, message_index: int, role: str, content: str
             conn.close()
         logger.debug("Stored embedding: conv=%s idx=%d role=%s", conversation_id, message_index, role)
     except Exception as e:
-        logger.debug("store_turn failed: %s", e)
+        logger.warning("store_turn failed: %s", e)
 
 
 def retrieve_relevant(conversation_id: str, query: str, top_k: int = 5,

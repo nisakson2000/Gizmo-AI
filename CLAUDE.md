@@ -186,9 +186,11 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Storage: session_embeddings table in conversations.db (conversation_id, message_index, role, content, embedding BLOB)
 - Indexing: fire-and-forget background tasks via asyncio.to_thread after each save_message()
 - Retrieval: cosine similarity search when conversation has 15+ messages, excludes recent 10 (already in sliding window), similarity threshold > 0.3, top 5 results
-- Injection: `<session-recall>` XML block in system prompt between recitation and vision layers
+- Injection: `<session-recall>` XML block in system prompt, deduplicated against windowed messages (content prefix matching)
 - Dependency: fastembed>=0.4.0, numpy>=1.26.0 (ONNX Runtime, zero VRAM impact)
 - Cache: ./memory/.fastembed-cache mounted to /root/.cache/fastembed (model downloaded once, persists across rebuilds)
+- Pre-warm: embedding model loaded at startup via background thread (avoids cold-start delay)
+- Cleanup: session_embeddings deleted on conversation prune, single delete, and partial delete (edit/regenerate)
 - File: session_memory.py (embed_text, store_turn, retrieve_relevant, format_recalled, get_query_embedding, get_stored_embeddings)
 
 ## Smart History Windowing

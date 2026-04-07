@@ -1,9 +1,9 @@
 # Gizmo-AI — Audit Report
 
-**Date:** 2026-04-06
+**Date:** 2026-04-07
 **Auditor:** Claude Code
-**Build:** Gizmo-AI V5.10
-**Scope:** Full codebase review — orchestrator (main.py, llm.py, tools.py, router.py, patterns.py, sandbox.py, tts.py, search.py, memory.py, session_memory.py, charmap.py, tracker.py, tracker_db.py, tracker_tools.py, code_chat.py, recite.py, web_fetch.py), all UI components (.svelte, .ts), docker-compose.yml, Dockerfiles, constitution.txt, config files, all 30 pattern configs
+**Build:** Gizmo-AI V5.11
+**Scope:** Full audit of Phase 1-4 memory/recall code — recite.py, web_fetch.py, session_memory.py, charmap.py, router.py integration points, main.py integration points (deletion cascades, windowing, deduplication, pre-warm), constitution.txt epistemic-honesty section
 
 ---
 
@@ -12,8 +12,45 @@
 | Severity | Count |
 |----------|-------|
 | Warning  | 0     |
-| Suggestion | 0   |
-| **Total** | **0** |
+| Suggestion | 3   |
+| **Total** | **3** |
+
+---
+
+## Open Issues — Suggestion
+
+### S1. httpx redirect limit is implicit default (20)
+
+**Location:** `web_fetch.py:21`
+
+httpx follows up to 20 redirects by default. A server with many redirects would consume time before failing. Setting `max_redirects=5` explicitly would be safer. Low risk since fetch_page has a 15s timeout.
+
+### S2. index_conversation_turns uses COUNT for message_index
+
+**Location:** `main.py:365-368`
+
+`_count_messages()` returns the total count; `msg_count - 2` and `msg_count - 1` are used as message indices. If two concurrent requests for the same conversation overlapped, indices could be wrong. In practice this doesn't happen because WebSocket connections are single-threaded per conversation and REST calls for the same conversation are sequential. Monitoring recommended if concurrent access is added.
+
+### S3. store_turn failures only logged at WARNING
+
+**Location:** `session_memory.py:89`
+
+Embedding failures are logged at WARNING but not surfaced to the user. If the fastembed model fails to load or ONNX Runtime crashes, all indexing silently stops. Session recall degrades without user-visible indication. Acceptable for fire-and-forget design but could benefit from a health check counter.
+
+---
+
+## Resolved Issues (V5.11 — Phase 4)
+
+### Issues found and fixed during this audit:
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| W1 | session_embeddings not cleaned up on conversation deletion (prune, delete, partial delete) | Added DELETE FROM session_embeddings in prune_conversations(), delete_conversation(), and delete_messages_from() |
+| W2 | First request after container restart delayed 2-3s by lazy embedding model load | Added _prewarm_embeddings() called via asyncio.to_thread during lifespan startup |
+| W3 | Session recall and smart windowing could inject the same message content twice | Reordered flow: window first, then format session recall excluding messages already in window |
+| W4 | Charmap regex extracted wrong word from "how many e's in the word 'coffee'" | Added `(?:the\s+word\s+)?` optional group before word capture + anchored to end of message |
+| W5 | Multimodal content arrays (list) caused dedup to fail (str(list) != plain string) | Added _extract_text() helper that extracts text from multimodal content arrays |
+| W6 | store_turn failures logged at DEBUG (invisible) | Upgraded to WARNING level |
 
 ---
 
@@ -36,53 +73,20 @@ All issues from the V5.8 audit have been resolved.
 | ID | Issue | Fix |
 |----|-------|-----|
 | S1 | DOMPurify SVG allow-list lacks explicit foreignObject block | Added `FORBID_TAGS: ['foreignObject', 'script', 'iframe']` to sanitize.ts |
-| S2 | loadConversations() silently swallows fetch errors | Added toast notification on catch: "Could not load conversations — orchestrator may be down" |
-| S3 | Upload fetch calls have no timeout | Added `AbortController` with 60s timeout to all 4 fetch calls in ChatInput.svelte (transcribe, upload-video/image, audio file upload, mic recording) |
-| S4 | Pattern cache globals have no synchronization primitive | Added `threading.Lock()` around all cache read/write paths in patterns.py |
+| S2 | loadConversations() silently swallows fetch errors | Added toast notification on catch |
+| S3 | Upload fetch calls have no timeout | Added `AbortController` with 60s timeout via fetchWithTimeout utility |
+| S4 | Pattern cache globals have no synchronization primitive | Added `threading.Lock()` with double-checked locking in patterns.py |
 
 ---
 
-## Verified Correct (False Positives Rejected)
-
-The following claims from the automated sweep were investigated and found to be non-issues:
-
-| Claim | Verdict | Reason |
-|-------|---------|--------|
-| XSS via SVG `foreignObject` | **Safe** | DOMPurify blocks `foreignObject` by default even with `ADD_TAGS: ['svg']` — hardened further in S1 |
-| `recitation_context` parameter missing from `build_system_prompt()` | **False** | Parameter exists in the function signature at `main.py:254-256` |
-| Audio double-finalize data corruption in `client.ts` | **False** | `audioFinalized` flag works correctly — set in `audio` handler, checked in `done` handler, reset on line 135 |
-| Symlink traversal in `serve_media()` | **False** | `resolve()` + `is_relative_to()` at `main.py:952-954` catches symlinks — `resolve()` follows symlinks before the boundary check |
-| Sandbox code injection via env vars | **False** | `printenv SOURCE_CODE > /tmp/file` outputs literal env var value — shell metacharacters in the value are not interpreted |
-| Pattern cache race condition (CRITICAL) | **Overstated** | Eager loading at startup eliminates the race window — hardened with threading.Lock in S4 |
-| SQL injection in tracker `LIMIT` clause | **False** | `int(limit)` cast at `tracker_db.py:358` prevents injection; unbounded limit is a style issue, not a vulnerability |
-| `httpx.AsyncClient` resource leak in `llm.py` | **False** | Context manager (`async with`) guarantees cleanup on all exit paths including early returns |
-| `generate_title()` silent failure | **False** | Wrapped in try/except at `main.py:422` with error logging — fire-and-forget is intentional for a non-critical background task |
-
----
-
-## Previously Resolved Issues (V5.7)
-
-All issues from the initial V5.7 audit were resolved in commits `cafb628` and prior.
-
-### Warnings (fixed in cafb628)
+## Previously Resolved (V5.7)
 
 | ID | Issue | Fix |
 |----|-------|-----|
-| W1 | Substring keyword matching caused false-positive pattern activation | Replaced with word-boundary regex (`re.search(r'\b' + re.escape(keyword) + r'\b')`) |
-| W2 | REST `/api/chat` not integrated with pattern router | Added `route()` call and `pattern`/`tool_schemas` passthrough, mirroring WebSocket handler |
-| W3 | Unhandled exception reading `system.md` could crash startup | Wrapped in try/except with `logger.warning()` and `continue` |
-
-### Suggestions (fixed in cafb628 or already implemented)
-
-| ID | Issue | Resolution |
-|----|-------|------------|
-| S1 | Keyword matching should use word-boundary regex | Fixed with W1 |
-| S2 | Short/generic keywords cause false matches | Removed `vs`, `what is`, `how does`, `explain`; lengthened `edit this` → `edit this writing`, `not working` → `code not working`, etc. |
-| S3 | `[pattern:name]` prefix sent to LLM and DB | Router now strips prefix, returns cleaned message; both WS and REST handlers use cleaned text |
-| S4 | Google Fonts loaded from CDN | Already self-hosted in `static/fonts/` — was a false positive |
-| S5 | Console sounds toggle missing `aria-label` | Already present: `aria-label="Toggle console sounds"` on `Settings.svelte:104` |
-| S6 | Sidebar mobile overlay has no keyboard dismiss | Already handled: `+layout.svelte:29` global Escape handler chain includes `sidebarOpen` |
-| S7 | No unsaved-changes guard in TaskDetail/NoteEditor | Already implemented: `onDestroy` handlers flush dirty state; 800ms debounce with `capturedTaskId`/`capturedNoteId` |
+| W1 | Substring keyword matching false positives | Word-boundary regex |
+| W2 | REST `/api/chat` not integrated with pattern router | Added route() call |
+| W3 | Unhandled exception reading system.md | try/except with continue |
+| S1-S7 | Various false positives | Verified and documented |
 
 ---
 
@@ -90,23 +94,13 @@ All issues from the initial V5.7 audit were resolved in commits `cafb628` and pr
 
 The following areas were audited and found to be clean:
 
-- **All imports valid** — No circular imports, no missing modules across all orchestrator Python files and UI TypeScript/Svelte files
-- **async/await correctness** — All async generators properly consumed, no missing awaits
-- **Tool registry consistency** — All 6 TOOL_DEFINITIONS have matching TOOL_REGISTRY entries; all pattern config.yaml `tools` lists reference valid tool names only
-- **Pattern loading** — 30 patterns load correctly, cache system works with threading.Lock, `list_patterns()` and `get_pattern()` return expected data
-- **Router three-step logic** — Recitation detection (Step 0), keyword pre-routing, pattern matching, and default fallback work correctly; tool sets properly merge via set union
-- **Tool scoping** — `get_default_tools()` returns always_available tools; patterns add their scoped tools on top; no tool is accidentally excluded
-- **WebSocket protocol** — All message types properly handled in all three WS clients (chat, code, tracker)
-- **ToolCallBlock.svelte** — Correct Svelte 5 $props usage, media detection works, copy-to-clipboard functional
-- **Constitution** — `<patterns>` section properly instructs the LLM to follow active patterns
-- **Docker/Podman** — All volume mounts include `:Z` for SELinux, all containers have healthchecks with start_period, all have restart policies, all ports unique and documented
-- **VRAM safety** — No new GPU consumers added; pattern system and recitation pipeline are CPU-only
-- **Security** — Pattern system prompts loaded from read-only mount; `[pattern:name]` lookup is cache-key only (no path traversal); no user input reaches filesystem paths; serve_media uses resolve() + is_relative_to(); sandbox has network disabled, read-only rootfs, memory/CPU/PID limits; DOMPurify explicitly forbids foreignObject/script/iframe
-- **Code chat and tracker isolation** — Intentionally do NOT use the pattern router; dedicated tool sets by design
-- **Multi-round tool loop** — Both WebSocket and continuation streams pass `route_result.tool_schemas` and temperature consistently
-- **persistedWritable** — Clean dedup into `persisted.ts`, all consumers properly import, try/catch on JSON.parse present
-- **LIKE escaping** — Both `main.py:963` and `tracker_db.py:351-353` properly escape SQL LIKE metacharacters
-- **Sandbox execution** — Proper isolation (read-only rootfs, no network, 256MB memory, 1 CPU, 256 PID limit, tmpfs /tmp)
-- **Tool argument validation** — `execute_tool()` uses explicit function name whitelist, no dynamic dispatch
-- **No hardcoded secrets** — No credentials, API keys, or tokens in any source or config file
-- **Recitation pipeline** — Pre-LLM interception works correctly; graceful fallback when SearXNG is down; temperature lowered to 0.2 for faithful reproduction; no VRAM impact
+- **Recitation pipeline** — Conservative regex detection, concurrent page fetches via asyncio.gather, graceful fallback when SearXNG down, 12K char limit correctly applied
+- **Session memory** — Thread-safe embedder initialization (double-checked locking), correct cosine similarity, proper SQLite parameterized queries, UNIQUE constraint prevents duplicate embeddings
+- **Smart windowing** — FIFO fallback when embeddings unavailable, always keeps last 6 messages, chronological order restored after scoring, budget correctly computed
+- **Character analysis** — Pre-compiled regexes, handles Unicode, conservative detection (len >= 2), end-of-message anchoring prevents mid-sentence false positives
+- **Router integration** — Recitation and charmap can coexist without conflict, correct priority ordering (recitation → charmap → keyword → pattern → default)
+- **Deletion cascades** — session_embeddings cleaned up in all three deletion paths (prune, single delete, partial delete), all within same transaction
+- **Constitution epistemic-honesty** — Clear, non-contradictory with existing sections, works when no session recall injected, properly scoped to three specific scenarios
+- **Deduplication** — Content-based 200-char prefix matching handles both string and multimodal content, runs after windowing for correct results
+- **Pre-warm** — Background thread doesn't block startup, failure is non-critical, embedding model cached on disk via volume mount
+- **Prompt layer order** — constitution → pattern → recitation → session_recall → charmap → vision → memories (documented and correct)
