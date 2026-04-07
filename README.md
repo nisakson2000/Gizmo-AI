@@ -37,6 +37,7 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Web search** via self-hosted SearXNG — no API keys needed
 - **Document upload** — analyze PDFs, text files, and code directly in chat (up to 50MB)
 - **Memory system** — remembers facts across conversations via BM25-ranked file storage with recency weighting
+- **Recitation & accurate recall** — when asked to recite poems, speeches, lyrics, or other known texts, Gizmo fetches the authoritative source from the web and presents it verbatim at low temperature instead of guessing from training memory
 
 ### Voice
 - **Voice Studio** — dedicated TTS playground with voice cloning: upload reference audio (auto-transcribed via Whisper), name and save voices, adjustable clip duration (30/60/90/120s)

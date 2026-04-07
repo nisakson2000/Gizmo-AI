@@ -252,8 +252,9 @@ def load_constitution() -> str:
 
 
 def build_system_prompt(user_message: str = "", has_vision: bool = False,
-                        pattern: dict | None = None) -> str:
-    """Build the full system prompt with constitution, pattern, and relevant memories."""
+                        pattern: dict | None = None,
+                        recitation_context: str = "") -> str:
+    """Build the full system prompt with constitution, pattern, recitation, and relevant memories."""
     constitution = load_constitution()
     parts = [constitution]
 
@@ -261,6 +262,9 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
     if pattern:
         parts.append(f"\n\n--- Active Analysis Pattern: {pattern['name']} ---")
         parts.append(pattern["system_prompt"])
+
+    if recitation_context:
+        parts.append(f"\n\n{recitation_context}")
 
     if has_vision:
         parts.append(f"\n\n{VISION_PROMPT}")
@@ -339,7 +343,7 @@ def build_messages(
 # Core streaming logic lives in llm.py. This wrapper passes TOOL_DEFINITIONS.
 
 
-async def stream_chat(messages, thinking_enabled=False, tools=True, tool_schemas=None):
+async def stream_chat(messages, thinking_enabled=False, tools=True, tool_schemas=None, temperature=0.7):
     """Stream chat from llama.cpp. Optionally accepts pre-selected tool schemas."""
     if tool_schemas is not None:
         tool_defs = tool_schemas
@@ -347,7 +351,7 @@ async def stream_chat(messages, thinking_enabled=False, tools=True, tool_schemas
         tool_defs = TOOL_DEFINITIONS
     else:
         tool_defs = None
-    async for event in _llm_stream_chat(messages, tools=tool_defs, thinking_enabled=thinking_enabled):
+    async for event in _llm_stream_chat(messages, tools=tool_defs, thinking_enabled=thinking_enabled, temperature=temperature):
         yield event
 
 
@@ -554,12 +558,24 @@ async def ws_chat(ws: WebSocket):
             if route_result.pattern:
                 conv_log.info("[%s] Pattern activated: %s", trace_id, route_result.pattern["name"])
 
+            # Recitation pipeline — fetch content before LLM sees the message
+            recitation_context = ""
+            llm_temperature = 0.7
+            if route_result.recitation_subject:
+                from recite import fetch_recitation_content, build_recitation_context
+                content, source_url = await fetch_recitation_content(route_result.recitation_subject)
+                if content:
+                    recitation_context = build_recitation_context(content, source_url, route_result.recitation_subject)
+                    llm_temperature = 0.2
+                    conv_log.info("[%s] Recitation content fetched: %d chars from %s", trace_id, len(content), source_url)
+
             # Build prompt with pattern (use cleaned text for memory retrieval)
             has_vision = bool(image_data or video_frames)
             system_prompt = build_system_prompt(
                 clean_text,
                 has_vision=has_vision,
                 pattern=route_result.pattern,
+                recitation_context=recitation_context,
             )
             history_msgs = window_messages(history_msgs, system_prompt, context_length)
             messages = build_messages(history_msgs, system_prompt)
@@ -571,7 +587,8 @@ async def ws_chat(ws: WebSocket):
             tool_calls_pending = []
 
             async for event in stream_chat(messages, thinking_enabled=thinking,
-                                           tool_schemas=route_result.tool_schemas):
+                                           tool_schemas=route_result.tool_schemas,
+                                           temperature=llm_temperature):
                 if event["type"] == "thinking":
                     full_thinking += event["content"]
                     await ws.send_json(event)
@@ -640,7 +657,8 @@ async def ws_chat(ws: WebSocket):
                 # Continue generation with tool results
                 tool_calls_pending = []
                 async for event in stream_chat(messages, thinking_enabled=False,
-                                               tool_schemas=route_result.tool_schemas):
+                                               tool_schemas=route_result.tool_schemas,
+                                               temperature=llm_temperature):
                     if event["type"] == "token":
                         full_response += event["content"]
                         await ws.send_json(event)
@@ -733,13 +751,25 @@ async def rest_chat(
     route_result = route(message)
     clean_text = route_result.cleaned_message
 
+    # Recitation pipeline
+    recitation_context = ""
+    llm_temperature = 0.7
+    if route_result.recitation_subject:
+        from recite import fetch_recitation_content, build_recitation_context
+        content, source_url = await fetch_recitation_content(route_result.recitation_subject)
+        if content:
+            recitation_context = build_recitation_context(content, source_url, route_result.recitation_subject)
+            llm_temperature = 0.2
+            conv_log.info("[REST] Recitation content fetched: %d chars from %s", len(content), source_url)
+
     history = get_conversation_messages(conversation_id)
     history_msgs = [{"role": m["role"], "content": m["content"]} for m in history]
     history_msgs.append({"role": "user", "content": clean_text})
 
     save_message(conversation_id, "user", clean_text)
 
-    system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern)
+    system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
+                                        recitation_context=recitation_context)
     context_length = max(2048, min(context_length, 131072))
     history_msgs = window_messages(history_msgs, system_prompt, context_length)
     messages = build_messages(history_msgs, system_prompt)
@@ -752,7 +782,8 @@ async def rest_chat(
         tool_calls_pending = []
 
         async for event in stream_chat(messages, thinking,
-                                       tool_schemas=route_result.tool_schemas):
+                                       tool_schemas=route_result.tool_schemas,
+                                       temperature=llm_temperature):
             if event["type"] == "token":
                 full_response += event["content"]
             elif event["type"] == "thinking":

@@ -70,7 +70,8 @@ Step-by-step walkthrough: user sends "Search for AI news" with thinking mode ON.
 3. Message payload: `{"message": "Search for AI news", "thinking": true, "conversation_id": "uuid"}`
 4. Orchestrator receives message, loads conversation history from SQLite database
 5. Orchestrator loads constitution file, scans memory for relevant files
-6. System prompt assembled: constitution.txt + relevant memories
+5a. Router checks for recitation intent (regex detection) — if matched, fetches authoritative text from the web via SearXNG + page scraping and injects it into the system prompt; LLM temperature lowered to 0.2
+6. System prompt assembled: constitution.txt + pattern (if any) + recitation content (if any) + relevant memories
 7. Messages array built in OpenAI format: `[system, ...history, user]`
 8. Orchestrator POSTs to `http://gizmo-llama:8080/v1/chat/completions` with `stream: true`, `enable_thinking: true`, and tool definitions
 9. Model begins generating — llama.cpp separates reasoning into `reasoning_content` field
@@ -331,8 +332,10 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   ├── code_chat.py                  # Code Playground AI chat WebSocket handler (isolated, run_code only)
 │   │   ├── patterns.py                    # Pattern library — loading, caching, keyword matching
 │   │   ├── router.py                      # Request router — keyword pre-routing + pattern matching + tool selection
+│   │   ├── recite.py                      # Recitation detection and web retrieval pipeline
 │   │   ├── search.py                      # SearXNG proxy
 │   │   ├── tts.py                         # Qwen3-TTS proxy (voice cloning support)
+│   │   ├── web_fetch.py                   # Page fetcher — HTTP GET + BeautifulSoup text extraction
 │   │   └── tools.py                       # Tool definitions, registry, and dispatch (web_search, memory, run_code, generate_document)
 │   ├── ui/
 │   │   ├── Dockerfile                     # Node build → nginx serve

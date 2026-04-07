@@ -114,6 +114,17 @@ Everything is containerized via Podman.
 - Categories: information_extraction (3), analysis (3), code (4), writing (3), research (5), security (4), productivity (3), data (3), planning (2)
 - Dependency: pyyaml>=6.0 for config.yaml parsing
 
+## Recitation Pipeline
+- Intercepts recitation requests (poems, speeches, lyrics) before the LLM sees the message
+- Detection: regex-based in recite.py — triggers on "recite", "full text of", "lyrics to/of", "words to", "how does X go", "quote from", "the Nth amendment", "word for word", "verbatim"
+- Retrieval: searches SearXNG for full text, fetches top 3 pages via web_fetch.py (httpx + BeautifulSoup), picks longest result > 200 chars
+- Injection: XML-tagged `<recitation-content>` block inserted into system prompt between pattern and vision layers
+- Temperature: lowered to 0.2 for faithful reproduction (default 0.7)
+- Fallback: if SearXNG is down or fetch fails, model responds normally from training memory (no crash)
+- Files: recite.py (detection + retrieval), web_fetch.py (page fetcher + text extraction)
+- Dependencies: beautifulsoup4>=4.12.0 added to requirements.txt
+- No new LLM tools, no UI changes, no VRAM impact
+
 ## Server-Side Conversations
 - SQLite database at /app/memory/conversations.db (two tables: conversations + messages)
 - Accessible from any origin/device (solves localStorage per-origin limitation)
@@ -291,5 +302,6 @@ Every code change, feature addition, or configuration update MUST include corres
 - [2026-03-26] V5.3 — Multi-language code execution (Python, JavaScript, Bash, C, C++, Go, Lua) + markup preview (HTML, CSS, SVG, Markdown), language selector in Code Playground, 150MB tmpfs for Go compilation
 - [2026-03-26] V5.4 — Code Playground promoted to /code route (split-pane, line numbers, AI chat overlay with /ws/code-chat), boot animations on every theme switch + opt-out toggle, conversation name in header, auto language detection on paste, icon rail Code nav
 - [2026-03-26] V5.5 — TTS enhancements: auto-transcribe voice uploads via Whisper (ICL mode), clone prompt caching, long text chunking (no more 4,000 char truncation), speech speed control (0.5x–2.0x via scipy), language selection (10 languages), 24kHz sample rate fix, silence padding, tuned generation params, ICL/x-vec quality badges in Voice Studio, migrate-transcripts endpoint
+- [2026-04-06] V5.8 — Recitation pipeline: pre-LLM interception of recitation requests (poems, speeches, lyrics), web fetch via SearXNG + BeautifulSoup text extraction, XML-tagged system prompt injection, temperature lowering to 0.2, graceful fallback when search unavailable, beautifulsoup4 dependency, all docs updated
 - [2026-04-06] V5.7 — Pattern system + scalable tool architecture: 30 Fabric-inspired cognitive templates (config/patterns/), router.py with keyword pre-routing + pattern matching + tool scoping, tool registry (TOOL_REGISTRY in tools.py), dynamic tool selection (model sees 3-8 tools per request), ToolCallBlock rich media rendering (image/video/audio), pyyaml dependency, all docs updated
 - [2026-03-26] V5.6 — Document generation tool (generate_document: PDF, DOCX, XLSX, PPTX, CSV, TXT via pre-tested Python templates in sandbox), sandbox Dockerfile updated with reportlab/openpyxl/python-docx/python-pptx, bind mount file extraction to /app/media/, extended media serving with Content-Disposition headers, TTS voice cloning fix (reverted to x_vector_only_mode=True to fix ICL warmup artifact), constitution split code-execution and document-generation into separate XML sections, MEDIA_HOST_DIR env var in docker-compose.yml

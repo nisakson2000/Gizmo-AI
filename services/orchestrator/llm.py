@@ -21,6 +21,8 @@ async def stream_chat(
     tools: list | None = None,
     thinking_enabled: bool = False,
     max_tokens: int = 8192,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
 ):
     """Stream chat completion from llama.cpp, yielding parsed events.
 
@@ -33,14 +35,16 @@ async def stream_chat(
                None means no tools.
         thinking_enabled: Whether to enable the thinking/reasoning mode.
         max_tokens: Maximum response tokens (default 8192).
+        temperature: Sampling temperature (default 0.7, use 0.2 for recitation).
+        top_p: Nucleus sampling threshold (default 0.9).
     """
     payload = {
         "model": "gizmo",
         "messages": messages,
         "stream": True,
         "max_tokens": max_tokens,
-        "temperature": 0.7,
-        "top_p": 0.9,
+        "temperature": temperature,
+        "top_p": top_p,
         "chat_template_kwargs": {"enable_thinking": thinking_enabled},
     }
 

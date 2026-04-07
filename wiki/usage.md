@@ -112,6 +112,32 @@ The model decides when to search based on context. When it does:
 
 No API keys or accounts needed — SearXNG aggregates results from multiple search engines.
 
+## Recitation & Accurate Recall
+
+When you ask Gizmo to recite a known text — a poem, speech, song lyrics, or constitutional amendment — it automatically fetches the authoritative source from the web instead of guessing from training memory. This means you get the actual text, not a hallucinated approximation.
+
+**Trigger phrases:**
+- "Recite the Jabberwocky by Lewis Carroll"
+- "Full text of the Gettysburg Address"
+- "Lyrics to Bohemian Rhapsody"
+- "Words to the Star Spangled Banner"
+- "How does Stopping by Woods on a Snowy Evening go"
+- "Quote from Martin Luther King I Have a Dream"
+- "The 14th amendment"
+- "Give me the text word for word"
+
+**How it works:**
+1. The router detects recitation intent via regex pattern matching (conservative — prefers missing a request over false positives)
+2. SearXNG searches for the full text, the orchestrator fetches and cleans the top results
+3. The authoritative text is injected into the system prompt with strict instructions to present it exactly
+4. LLM temperature is lowered to 0.2 for faithful reproduction
+5. Follow-up questions work naturally because the full text is in conversation history
+
+**Limitations:**
+- Detection is regex-based; some phrasing may not trigger the pipeline. If it doesn't activate, try a more explicit phrase like "Recite..." or "Full text of..."
+- Web scraping quality varies by source — some pages include navigation or metadata
+- If SearXNG is unavailable, the model falls back to its training memory (less accurate)
+
 ## File Uploads
 
 Click the **paperclip button** to upload files.

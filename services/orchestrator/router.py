@@ -5,6 +5,7 @@ import re
 from typing import Optional
 
 from patterns import match_pattern
+from recite import is_recitation_request
 from tools import get_default_tools, get_tool_schemas, has_tool
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class RouteResult:
         self.tool_schemas: list[dict] = []
         self.pattern: Optional[dict] = None
         self.cleaned_message: str = ""  # message with [pattern:name] prefix stripped
+        self.recitation_subject: str = ""
         self.source: str = "default"
 
     def __repr__(self):
@@ -58,6 +60,13 @@ def route(user_message: str) -> RouteResult:
     result = RouteResult()
     result.cleaned_message = user_message
     default_tools = get_default_tools()
+
+    # ── Step 0: Recitation detection (pre-LLM content injection) ──
+    is_recite, subject = is_recitation_request(user_message)
+    if is_recite:
+        result.recitation_subject = subject
+        result.source = "recitation"
+        logger.info("Recitation detected: '%s' → subject '%s'", user_message[:60], subject)
 
     # ── Step 1: Keyword pre-routing ──
     keyword_tools = set()
