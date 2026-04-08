@@ -108,6 +108,7 @@ services:
       - label=disable
     volumes:
       - ./config:/app/config:ro,Z
+      - ./config/modes:/app/config/modes:rw,Z
       - ./memory:/app/memory:rw,Z
       - ./logs:/app/logs:rw,Z
       - ./voices:/app/voices:rw,Z

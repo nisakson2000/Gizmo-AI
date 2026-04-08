@@ -3,6 +3,7 @@
 	import { send, stopGeneration } from '$lib/ws/client';
 	import { connectionStatus } from '$lib/stores/connection';
 	import { pendingSuggestion, thinkingEnabled, voiceStudioOpen, focusTrigger } from '$lib/stores/settings';
+	import ModeSelector from './ModeSelector.svelte';
 	import { toast } from '$lib/stores/toast';
 	import { fetchWithTimeout } from '$lib/utils/fetch';
 	import { playSelect } from '$lib/utils/sounds';
@@ -403,6 +404,7 @@
 				</svg>
 				Think
 			</button>
+			<ModeSelector />
 			<button
 				onclick={() => voiceStudioOpen.set(true)}
 				class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-bg-secondary text-text-dim border border-border/50 hover:border-border hover:text-text-secondary transition-all"

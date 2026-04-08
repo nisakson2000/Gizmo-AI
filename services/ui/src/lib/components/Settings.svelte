@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { thinkingEnabled, ttsEnabled, contextLength, settingsOpen, voiceStudioOpen, memoryManagerOpen, ttsVoiceId, ttsSpeed, ttsLanguage } from '$lib/stores/settings';
+	import { thinkingEnabled, ttsEnabled, contextLength, settingsOpen, voiceStudioOpen, memoryManagerOpen, modeEditorOpen, ttsVoiceId, ttsSpeed, ttsLanguage } from '$lib/stores/settings';
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import { theme, themeOptions } from '$lib/stores/theme';
 	import type { ThemeName } from '$lib/stores/theme';
@@ -277,6 +277,25 @@
 							</div>
 							<button
 								onclick={() => { settingsOpen.set(false); memoryManagerOpen.set(true); }}
+								class="px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-primary text-text-secondary border border-border/50 hover:border-accent/40 hover:text-text-primary transition-all"
+							>
+								Open
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- ═══ Modes ═══ -->
+				<div>
+					<p class="text-[11px] uppercase tracking-wider text-text-dim/70 font-medium mb-3">Modes</p>
+					<div class="bg-bg-tertiary/30 border border-border/30 rounded-xl p-4">
+						<div class="flex items-center justify-between">
+							<div class="flex-1 mr-4">
+								<p class="text-sm font-medium">Mode Editor</p>
+								<p class="text-xs text-text-dim mt-0.5">Customize behavioral modes and create new ones.</p>
+							</div>
+							<button
+								onclick={() => { settingsOpen.set(false); modeEditorOpen.set(true); }}
 								class="px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-primary text-text-secondary border border-border/50 hover:border-accent/40 hover:text-text-primary transition-all"
 							>
 								Open

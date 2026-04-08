@@ -13,4 +13,6 @@ export const codePlaygroundOpen = writable(false);
 export const ttsVoiceId = persistedWritable<string | null>('gizmo:ttsVoiceId', null);
 export const ttsSpeed = persistedWritable<number>('gizmo:ttsSpeed', 1.0);
 export const ttsLanguage = persistedWritable<string>('gizmo:ttsLanguage', 'Auto');
+export const activeMode = persistedWritable<string>('gizmo:mode', 'chat');
+export const modeEditorOpen = writable(false);
 export const focusTrigger = writable(0);

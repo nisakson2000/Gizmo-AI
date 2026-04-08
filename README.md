@@ -121,6 +121,7 @@ bash scripts/start.sh            # Starts all 6 services
 <details>
 <summary><strong>AI Capabilities</strong></summary>
 
+- **Mode switcher** — 6 behavioral modes (Chat, Brainstorm, Coder, Research, Planner, Roleplay) + custom mode creation with prompt editor
 - **Thinking mode** — step-by-step reasoning in collapsible blocks (toggle on/off)
 - **Vision** — analyze images via multimodal vision projector (mmproj)
 - **Video analysis** — upload video, extract frames, analyze visual content with playback

@@ -64,6 +64,7 @@ Everything is containerized via Podman.
 - New REST endpoint → `main.py` (add route + handler)
 - New LLM tool → `tools.py` (add to TOOL_DEFINITIONS + TOOL_REGISTRY + execute_tool dispatch)
 - New pattern → `config/patterns/<name>/` (create config.yaml + system.md)
+- New mode → `config/modes/<name>/` (create config.yaml + system.md) + REST via /api/modes
 - New UI route → `services/ui/src/routes/<name>/+page.svelte`
 - New UI component → `services/ui/src/lib/components/`
 - New Svelte action → `services/ui/src/lib/actions/` (e.g., focusTrap.ts, swipe.ts, highlight.ts)
@@ -300,9 +301,27 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - `<knowledge-awareness>`: teaches model to use knowledge facts naturally, avoid re-asking known answers, gently verify potentially outdated facts
 - `<epistemic-honesty>` section: distinguishes retrieved content (present exactly), session recall (authoritative record), and training knowledge (confident but flag genuine uncertainty)
 
+## Mode System
+- 6 built-in behavioral modes: Chat (default), Brainstorm, Coder, Research, Planner, Roleplay
+- Stored as `config/modes/{name}/config.yaml + system.md` (mirrors pattern directory structure)
+- Modes are additive behavioral frames — constitution always applies underneath
+- Modes do NOT scope tools — that stays with patterns only
+- Chat mode has empty system.md (default behavior via constitution alone)
+- Mode prompts wrapped in `<mode:{name}>` XML tags, 10-15 lines each
+- Global localStorage persistence via `persistedWritable('gizmo:mode', 'chat')`
+- Sent to backend on every WebSocket message as `mode` field
+- Backend module: `modes.py` (thread-safe cache, double-checked locking, CRUD operations)
+- REST endpoints: GET/POST /api/modes, GET/PUT/DELETE /api/modes/{name}
+- Built-in modes cannot be deleted; custom modes can be created/edited/deleted
+- Path traversal protection: regex-validated names + `is_relative_to()` check
+- docker-compose.yml: `./config/modes:/app/config/modes:rw,Z` overrides the `ro` parent mount
+- ModeSelector: pill button in ChatInput toolbar (popover dropdown with all modes)
+- ModeEditor: modal from Settings → Modes (left list + right editor, create/edit/delete)
+
 ## System Prompt Layers (build_system_prompt)
 Explicit layered assembly with per-layer token budget logging:
 - **L0 (IMMUNE)**: constitution + identity reminder (30+ msgs)
+- **L0.5 (Mode)**: mode_prompt (behavioral frame, e.g., "think creatively") — skipped for Chat mode
 - **L1 (Context)**: conversation_summary, pattern, recitation, charmap, vision
 - **L2 (Memory recall)**: unified block combining session_recall + cross_conv_recall
 - **L3 (Knowledge)**: knowledge_facts + BM25 memories
@@ -326,6 +345,7 @@ Explicit layered assembly with per-layer token budget logging:
 - TrackerChat uses ThinkingBlock component for expandable thinking (replaces 120-char truncation)
 
 ## UI Features
+- Mode switcher: pill button in ChatInput toolbar with popover dropdown, ModeEditor modal from Settings
 - 9 Nintendo console themes with per-console sounds, screen effects, boot animations
 - CSS targeting uses data-role attribute on msg-appear (Lightning CSS strips :has() selectors)
 - Toast notification system: global toast store + component, supports optional action button (used for undo)

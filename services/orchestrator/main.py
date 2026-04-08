@@ -35,6 +35,7 @@ from knowledge import maybe_extract_facts, get_relevant_facts, format_knowledge_
 from importance import score_message
 from router import route
 from patterns import reload_patterns, list_patterns
+from modes import get_mode, get_mode_prompt, list_modes, save_mode_prompt, save_mode_config, create_mode, delete_mode, reload_modes
 from tracker import router as tracker_router
 from code_chat import router as code_chat_router
 from tracker_db import init_tracker_db
@@ -392,7 +393,8 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
                         cross_memory: str = "",
                         knowledge_context: str = "",
                         charmap_content: str = "",
-                        conversation_length: int = 0) -> str:
+                        conversation_length: int = 0,
+                        mode: str = "chat") -> str:
     """Build the full system prompt with explicit layered assembly and token budget tracking."""
     layers: dict[str, str] = {}
 
@@ -402,6 +404,14 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
 
     if conversation_length >= IDENTITY_REINFORCE_MIN_MESSAGES:
         layers["identity_reminder"] = IDENTITY_REMINDER
+
+    # Layer 0.5: Mode prompt (behavioral frame)
+    if mode and mode != "chat":
+        mode_prompt = get_mode_prompt(mode)
+        if mode_prompt:
+            mode_data = get_mode(mode)
+            label = mode_data["label"] if mode_data else mode.capitalize()
+            layers["mode"] = f"--- Active Mode: {label} ---\n{mode_prompt}"
 
     # Layer 1: Context
     if conversation_summary:
@@ -812,6 +822,71 @@ async def api_list_patterns():
     return list_patterns()
 
 
+# --- Mode CRUD ---
+
+
+@app.get("/api/modes")
+async def api_list_modes():
+    """List all behavioral modes sorted by order."""
+    return list_modes()
+
+
+@app.get("/api/modes/{name}")
+async def api_get_mode(name: str):
+    """Get full mode details including system_prompt content."""
+    mode = get_mode(name)
+    if not mode:
+        raise HTTPException(status_code=404, detail="Mode not found")
+    return mode
+
+
+@app.put("/api/modes/{name}")
+async def api_update_mode(name: str, request: Request):
+    """Update an existing mode's system_prompt and/or config fields."""
+    body = await request.json()
+    updated = False
+
+    if "system_prompt" in body:
+        if not save_mode_prompt(name, body["system_prompt"]):
+            raise HTTPException(status_code=404, detail="Mode not found")
+        updated = True
+
+    if "label" in body or "description" in body:
+        if not save_mode_config(name, label=body.get("label"), description=body.get("description")):
+            raise HTTPException(status_code=404, detail="Mode not found")
+        updated = True
+
+    if not updated:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    return {"status": "ok"}
+
+
+@app.post("/api/modes")
+async def api_create_mode(request: Request):
+    """Create a new custom mode."""
+    body = await request.json()
+    name = body.get("name", "").strip().lower()
+    label = body.get("label", "").strip()
+    description = body.get("description", "").strip()
+    system_prompt = body.get("system_prompt", "")
+
+    if not name or not label:
+        raise HTTPException(status_code=400, detail="name and label are required")
+
+    result = create_mode(name, label, description, system_prompt)
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid name or mode already exists")
+    return result
+
+
+@app.delete("/api/modes/{name}")
+async def api_delete_mode(name: str):
+    """Delete a custom mode. Built-in modes cannot be deleted."""
+    if not delete_mode(name):
+        raise HTTPException(status_code=400, detail="Cannot delete (built-in or not found)")
+    return {"status": "ok"}
+
+
 @app.get("/api/services/health")
 async def services_health():
     """Check health of all backend services."""
@@ -852,6 +927,7 @@ async def ws_chat(ws: WebSocket):
                 continue
 
             user_text = msg.get("message", "")
+            active_mode = msg.get("mode", "chat")
             image_data = msg.get("image")  # base64 data URL for vision
             video_frames = msg.get("video_frames")  # list of base64 data URLs
             thinking = msg.get("thinking", False)
@@ -975,7 +1051,8 @@ async def ws_chat(ws: WebSocket):
             temp_prompt = build_system_prompt(
                 clean_text, has_vision=has_vision, pattern=route_result.pattern,
                 recitation_context=recitation_context, conversation_summary=conv_summary,
-                charmap_content=route_result.charmap_content, conversation_length=conv_len)
+                charmap_content=route_result.charmap_content, conversation_length=conv_len,
+                mode=active_mode)
             history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                            query_embedding=query_embedding,
                                            conversation_id=conversation_id)
@@ -1006,7 +1083,8 @@ async def ws_chat(ws: WebSocket):
                 recitation_context=recitation_context, conversation_summary=conv_summary,
                 session_recall=session_recall, cross_memory=cross_memory_context,
                 knowledge_context=knowledge_context,
-                charmap_content=route_result.charmap_content, conversation_length=conv_len)
+                charmap_content=route_result.charmap_content, conversation_length=conv_len,
+                mode=active_mode)
             messages = build_messages(history_msgs, system_prompt)
 
             # Stream with selected tools
@@ -1206,6 +1284,7 @@ async def rest_chat(
     thinking: bool = Form(False),
     conversation_id: str = Form(""),
     context_length: int = Form(32768),
+    mode: str = Form("chat"),
 ):
     """Non-streaming chat endpoint."""
     if not conversation_id:
@@ -1255,7 +1334,8 @@ async def rest_chat(
                                       recitation_context=recitation_context,
                                       conversation_summary=conv_summary,
                                       charmap_content=route_result.charmap_content,
-                                      conversation_length=rest_conv_len)
+                                      conversation_length=rest_conv_len,
+                                      mode=mode)
     context_length = max(2048, min(context_length, 131072))
     history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                    query_embedding=query_embedding,
@@ -1279,7 +1359,8 @@ async def rest_chat(
                                         cross_memory=cross_memory_context,
                                         knowledge_context=knowledge_context,
                                         charmap_content=route_result.charmap_content,
-                                        conversation_length=rest_conv_len)
+                                        conversation_length=rest_conv_len,
+                                        mode=mode)
     messages = build_messages(history_msgs, system_prompt)
 
     full_response = ""

@@ -1,0 +1,5 @@
+name: chat
+label: Chat
+description: General conversation — default behavior
+icon: chat
+order: 0

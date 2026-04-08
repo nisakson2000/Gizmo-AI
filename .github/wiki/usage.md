@@ -25,6 +25,32 @@
 - **Stop generation:** Click the stop button that appears during generation
 - **New conversation:** Click "+ New Chat" in the sidebar
 
+## Behavioral Modes
+
+Click the **mode pill button** in the toolbar (next to Think) to switch between behavioral modes. Modes change _how_ Gizmo responds without affecting its core identity, memory, or tool access.
+
+### Built-in Modes
+
+| Mode | Behavior |
+|------|----------|
+| **Chat** (default) | General conversation — no additional behavioral prompt |
+| **Brainstorm** | Creative ideation, "yes and" thinking, quantity over judgment |
+| **Coder** | Code-first responses, working implementations, use run_code tool |
+| **Research** | Proactive web search, source citations, explain from fundamentals |
+| **Planner** | Goal decomposition, actionable steps, risk identification |
+| **Roleplay** | Stay in character, match vocabulary/mannerisms, no meta-commentary |
+
+### Mode Editor
+
+Open **Settings > Modes > Open** to customize mode prompts or create entirely new modes.
+
+- Edit any mode's system prompt (the behavioral instructions injected into the system prompt)
+- Adjust the label and description shown in the selector
+- Create new custom modes with your own behavioral templates
+- Delete custom modes (built-in modes are protected)
+
+Modes coexist with analysis patterns — a mode sets the behavioral posture ("think like a brainstormer") while a pattern adds structured output formatting.
+
 ## Thinking Mode
 
 Toggle thinking mode with the **Think** pill button below the input box (similar to Claude and ChatGPT).

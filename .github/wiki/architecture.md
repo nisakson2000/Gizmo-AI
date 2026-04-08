@@ -210,6 +210,11 @@ Supports up to 5 rounds of automatic tool calling per request.
 | `/api/memory/{subdir}/{filename}` | DELETE | Delete a specific memory file |
 | `/api/run-code` | POST | Execute code in sandbox (JSON: `code`, `language?`, `timeout?`). Languages: python, javascript, bash, c, cpp, go, lua |
 | `/api/patterns` | GET | List available analysis patterns (name + description) |
+| `/api/modes` | GET | List all behavioral modes (name, label, description, icon, order) |
+| `/api/modes` | POST | Create a new custom mode (JSON: name, label, description, system_prompt) |
+| `/api/modes/{name}` | GET | Get full mode details including system_prompt content |
+| `/api/modes/{name}` | PUT | Update mode system_prompt and/or config (JSON: system_prompt?, label?, description?) |
+| `/api/modes/{name}` | DELETE | Delete a custom mode (built-in modes protected) |
 
 ## Pattern System
 
@@ -364,10 +369,14 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   ├── constitution.txt                   # System prompt / persona (prose, # = comments)
 │   ├── models.yaml                        # Model configuration
 │   ├── services.yaml                      # Service endpoints
-│   └── patterns/                          # Fabric-inspired cognitive templates (30 patterns)
-│       └── <name>/                        # Each pattern has config.yaml + system.md
-│           ├── config.yaml                # Name, description, keywords, scoped tools
-│           └── system.md                  # System prompt (IDENTITY, STEPS, OUTPUT, INPUT)
+│   ├── patterns/                          # Fabric-inspired cognitive templates (30 patterns)
+│   │   └── <name>/                        # Each pattern has config.yaml + system.md
+│   │       ├── config.yaml                # Name, description, keywords, scoped tools
+│   │       └── system.md                  # System prompt (IDENTITY, STEPS, OUTPUT, INPUT)
+│   └── modes/                             # Behavioral mode presets (6 built-in + custom)
+│       └── <name>/                        # Each mode has config.yaml + system.md
+│           ├── config.yaml                # Name, label, description, icon, order
+│           └── system.md                  # Behavioral prompt (XML-tagged, 10-15 lines)
 ├── services/
 │   ├── llama/
 │   │   └── Dockerfile                     # llama.cpp from source with CUDA
@@ -379,6 +388,7 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   ├── sandbox.py                     # Podman sandbox client (7-language code execution via Unix socket)
 │   │   ├── code_chat.py                  # Code Playground AI chat WebSocket handler (isolated, run_code only)
 │   │   ├── patterns.py                    # Pattern library — loading, caching, keyword matching
+│   │   ├── modes.py                       # Behavioral mode system — loading, caching, CRUD
 │   │   ├── router.py                      # Request router — keyword pre-routing + pattern matching + tool selection
 │   │   ├── charmap.py                     # Character analysis injection (letter counting, spelling)
 │   │   ├── recite.py                      # Recitation detection and web retrieval pipeline

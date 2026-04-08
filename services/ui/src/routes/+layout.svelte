@@ -6,7 +6,8 @@
 	import IconRail from '$lib/components/IconRail.svelte';
 	import BootSequence from '$lib/components/BootSequence.svelte';
 	import { theme } from '$lib/stores/theme';
-	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, codePlaygroundOpen, sidebarOpen } from '$lib/stores/settings';
+	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, modeEditorOpen, codePlaygroundOpen, sidebarOpen } from '$lib/stores/settings';
+	import ModeEditor from '$lib/components/ModeEditor.svelte';
 	import { trackerChatOpen, selectedTaskId, selectedNoteId } from '$lib/stores/tracker';
 
 	let { children } = $props();
@@ -25,6 +26,7 @@
 		if (e.key === 'Escape') {
 			if ($settingsOpen) { settingsOpen.set(false); e.preventDefault(); return; }
 			if ($voiceStudioOpen) { voiceStudioOpen.set(false); e.preventDefault(); return; }
+			if ($modeEditorOpen) { modeEditorOpen.set(false); e.preventDefault(); return; }
 			if ($memoryManagerOpen) { memoryManagerOpen.set(false); e.preventDefault(); return; }
 			if ($codePlaygroundOpen) { codePlaygroundOpen.set(false); e.preventDefault(); return; }
 			if ($trackerChatOpen) { trackerChatOpen.set(false); e.preventDefault(); return; }
@@ -45,5 +47,6 @@
 </div>
 
 <Settings />
+<ModeEditor />
 <Toast />
 <BootSequence />
