@@ -263,10 +263,22 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - No LLM calls — pure keyword counting, highest wins, tie → 'general'
 - Used as optional filter in cross-conv search (strong match filters, weak match searches all)
 
+## Temporal Knowledge Graph (knowledge.py)
+- Automatic fact extraction from every non-trivial conversation exchange via local LLM
+- Extraction prompt: JSON array of {subject, predicate, object, confidence} — max 5 facts per exchange
+- LLM call: non-streaming, temperature 0.2, max_tokens 300, enable_thinking false
+- Entity normalization: lowercase, strip titles (Dr/Mr/Ms/Prof), spaces to underscores
+- Fact invalidation: when a new fact contradicts an old one (same subject+predicate, different object), old fact gets `valid_to` set
+- Only current facts (valid_to IS NULL) with confidence >= 0.6 are injected
+- Injection: `<knowledge-facts>` XML block, max 8 facts, scored by keyword overlap with query
+- Fire-and-forget: `asyncio.create_task(maybe_extract_facts(...))` after each response save
+- Escape hatch: `KNOWLEDGE_EXTRACTION_ENABLED` env var (set to "false" to disable extraction; injection still works)
+- Duplicate detection: skips inserting facts that already exist as current
+
 ## V6 Database Tables
 - `conversation_summaries` — rolling LLM summaries of conversation segments (for compaction, Prompt 3)
 - `cross_conv_embeddings` — semantic chunks indexed across all conversations (active, populated by cross_memory.py)
-- `knowledge_facts` — temporal knowledge graph with validity windows (for fact extraction, Prompt 4)
+- `knowledge_facts` — temporal knowledge graph with validity windows (active, populated by knowledge.py)
 - Cascade deletes in `prune_conversations()`, `delete_conversation()`, and related cleanup paths
 
 ## Character Analysis (charmap.py)
@@ -278,7 +290,7 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 ## Constitution & Epistemic Honesty
 - XML-tagged sections: `<identity>`, `<output-formatting>`, `<tool-discipline>`, `<web-search>`, `<response-quality>`, `<precision-awareness>`, `<epistemic-honesty>`, `<code-execution>`, `<document-generation>`, `<patterns>`
 - `<epistemic-honesty>` section: distinguishes retrieved content (present exactly), session recall (authoritative record), and training knowledge (confident but flag genuine uncertainty)
-- System prompt layer order: constitution → pattern → conversation_summary → recitation → session_recall → cross_conv_recall → charmap → vision → memories
+- System prompt layer order: constitution → pattern → conversation_summary → recitation → session_recall → cross_conv_recall → knowledge_facts → charmap → vision → memories
 
 ## Tracker Module
 - SQLite database at /app/tracker/tracker.db (tasks + notes tables)

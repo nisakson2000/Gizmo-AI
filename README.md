@@ -131,6 +131,7 @@ bash scripts/start.sh            # Starts all 6 services
 - **Memory** — BM25-ranked facts with recency weighting + semantic session recall (CPU embeddings)
 - **Cross-conversation recall** — two-tier semantic search across all past conversations with topic room categorization
 - **Conversation compaction** — rolling LLM summaries preserve context awareness in long conversations
+- **Knowledge extraction** — automatic temporal fact tracking with entity normalization and invalidation
 - **Smart context windowing** — keeps most relevant older messages by semantic similarity
 - **Recitation** — fetches authoritative text from the web for poems, lyrics, speeches
 - **Character analysis** — accurate letter counting via pre-computed character maps

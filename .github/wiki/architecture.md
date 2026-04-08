@@ -292,6 +292,10 @@ Long conversations (20+ messages) receive rolling LLM summaries of older segment
 4. Top 5 matches (max 600 chars each) are injected into the system prompt
 5. Path traversal protection: `Path.is_relative_to()` validation on all file operations
 
+### Temporal Knowledge Graph
+
+The orchestrator automatically extracts structured facts from conversation exchanges via the local LLM. Facts are stored as subject-predicate-object triples with validity windows (`valid_from`/`valid_to`). When a new fact contradicts an old one (same subject+predicate, different object), the old fact is invalidated. Entity names are normalized for consistent lookup (e.g., "Nick Isakson" → "nick_isakson"). Current facts (confidence >= 0.6) are injected as a `<knowledge-facts>` XML block. Extraction runs as a fire-and-forget background task and can be disabled via the `KNOWLEDGE_EXTRACTION_ENABLED` environment variable.
+
 ## Tool Calling
 
 Tools follow the OpenAI function-calling format. llama.cpp supports this natively.

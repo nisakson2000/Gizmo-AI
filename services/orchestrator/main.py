@@ -30,6 +30,7 @@ import numpy as np
 from session_memory import retrieve_relevant, format_recalled, store_turn, get_query_embedding, get_stored_embeddings, cosine_sim
 from cross_memory import search_cross_conversations, format_cross_recall, index_cross_conversation, backfill_cross_conv_embeddings
 from compaction import maybe_compact, get_conversation_summary
+from knowledge import maybe_extract_facts, get_relevant_facts, format_knowledge_facts
 from router import route
 from patterns import reload_patterns, list_patterns
 from tracker import router as tracker_router
@@ -377,6 +378,7 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
                         conversation_summary: str = "",
                         session_recall: str = "",
                         cross_memory: str = "",
+                        knowledge_context: str = "",
                         charmap_content: str = "") -> str:
     """Build the full system prompt with all context layers."""
     constitution = load_constitution()
@@ -398,6 +400,9 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
 
     if cross_memory:
         parts.append(f"\n\n{cross_memory}")
+
+    if knowledge_context:
+        parts.append(f"\n\n{knowledge_context}")
 
     if charmap_content:
         parts.append(f"\n\n{charmap_content}")
@@ -850,11 +855,16 @@ async def ws_chat(ws: WebSocket):
             # Format cross-conversation recall
             cross_memory_context = format_cross_recall(cross_conv_results) if cross_conv_results else ""
 
+            # Retrieve relevant knowledge facts
+            knowledge_facts = get_relevant_facts(user_text)
+            knowledge_context = format_knowledge_facts(knowledge_facts) if knowledge_facts else ""
+
             # Final system prompt with all context layers
             system_prompt = build_system_prompt(
                 clean_text, has_vision=has_vision, pattern=route_result.pattern,
                 recitation_context=recitation_context, conversation_summary=conv_summary,
                 session_recall=session_recall, cross_memory=cross_memory_context,
+                knowledge_context=knowledge_context,
                 charmap_content=route_result.charmap_content)
             messages = build_messages(history_msgs, system_prompt)
 
@@ -1026,6 +1036,8 @@ async def ws_chat(ws: WebSocket):
                     user_msg_index, asst_msg_index))
                 msg_count = len(get_conversation_messages(conversation_id))
                 asyncio.create_task(maybe_compact(conversation_id, msg_count))
+                asyncio.create_task(maybe_extract_facts(
+                    conversation_id, user_text, full_response, user_msg_index))
 
             await ws.send_json({
                 "type": "done",
