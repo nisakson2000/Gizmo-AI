@@ -44,5 +44,6 @@ prompts/
 # Tasks (local only)
 tasks/
 
-# Auditor scratch (wiki clone)
+# Auditor scratch
 .wiki-published/
+AUDIT.md
