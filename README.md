@@ -26,7 +26,7 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Full-text search** — sidebar filters by title instantly; press Enter for deep search across all message content
 - **Conversation export** — download as formatted Markdown from the sidebar
 - **Conversation rename** — double-click any title in the sidebar to rename
-- **Keyboard shortcuts** — Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+/ (focus input), Escape (close modals)
+- **Keyboard shortcuts** — Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+/ (focus input), Escape (close modals); Tracker: j/k (navigate), x (toggle status), n (new task), / (search)
 
 ### AI Capabilities
 - **Thinking mode** — model reasons step-by-step in collapsible blocks before responding (toggle on/off)
@@ -52,7 +52,7 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 ### Tools
 - **Code execution sandbox** — run code in 7 languages (Python, JavaScript, Bash, C, C++, Go, Lua) in isolated Podman containers (no network, 256MB RAM, read-only filesystem; Python includes numpy, pandas, matplotlib, sympy, scipy)
 - **Document generation** — generate PDF, DOCX, XLSX, PPTX, CSV, and TXT files via natural language using the `generate_document` tool (pre-tested Python templates run in sandbox, files served as downloads)
-- **Code Playground** — dedicated `/code` route with split-pane editor (line numbers + output), built-in AI code assistant with isolated chat, auto language detection on paste
+- **Code Playground** — dedicated `/code` route with syntax-highlighted split-pane editor (resizable via drag handle), built-in AI code assistant with isolated chat, auto language detection on paste, auto-save, copy/download buttons, word wrap toggle, output file display
 - **Markup preview** — live client-side rendering for HTML, CSS, SVG, and Markdown with auto-preview as you type
 - **Memory Manager** — browse, add, and delete memories from the UI
 
@@ -63,13 +63,16 @@ The model used is an abliterated variant of Qwen3.5-9B — meaning the safety re
 - **Pattern-scoped tools** — each pattern specifies which tools are available, preventing tool confusion on a 9B model
 
 ### Productivity
-- **Task Tracker** — built-in task and note management with tags, priorities, due dates, recurrence, and subtasks; LLM-powered natural language task creation via dedicated `/tracker` route
+- **Task Tracker** — built-in task and note management with tags, priorities, due dates, recurrence, and subtasks; LLM-powered natural language task creation via dedicated `/tracker` route; free-text task search, keyboard navigation (j/k/x/n), inline title editing, collapsible subtasks, undo delete with toast
 
 ### UI & System
 - **Nintendo console themes** — 9 themes (NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, Switch) with physical console frames, per-console sound effects, screen technology overlays (CRT vignette, LCD dot matrix, fog, neon bleed), era-specific message styling, and animated boot sequences (plays on every theme switch, with opt-out toggle in Settings)
 - **Conversation context** — active conversation title displayed in the header bar
 - **Icon rail navigation** — labeled sidebar with Chat, Tasks, Code, and Settings
-- **Toast notifications** — non-intrusive feedback for copy, export, and error events
+- **Toast notifications** — non-intrusive feedback for copy, export, error events, and undo actions
+- **Scroll-to-bottom** — floating button appears when scrolled up in chat, click to jump to latest
+- **Mobile gestures** — swipe right from left edge to open sidebar, swipe left to close; message actions always visible on touch devices
+- **Accessibility** — modal focus trapping, aria-expanded on collapsible blocks, sidebar keyboard navigation, prefers-reduced-motion support
 - **Service health dashboard** — live status monitoring for all backend services
 - **Customizable persona** — XML-tagged constitution file (`config/constitution.txt`) with tool decision framework and abliteration-aware precision rules
 - **KV cache quantization** — Q8_0 quantized KV cache frees ~6GB VRAM for LLM + TTS coexistence

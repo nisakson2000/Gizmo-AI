@@ -66,6 +66,7 @@ Everything is containerized via Podman.
 - New pattern → `config/patterns/<name>/` (create config.yaml + system.md)
 - New UI route → `services/ui/src/routes/<name>/+page.svelte`
 - New UI component → `services/ui/src/lib/components/`
+- New Svelte action → `services/ui/src/lib/actions/` (e.g., focusTrap.ts, swipe.ts, highlight.ts)
 - New WebSocket handler → dedicated module + register in `main.py` lifespan
 - System prompt changes → `config/constitution.txt` (lines starting with # are stripped as comments)
 - Docker/infra changes → `docker-compose.yml` + `config/services.yaml`
@@ -149,11 +150,18 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Client: services/orchestrator/sandbox.py (httpx AsyncHTTPTransport with UDS)
 - Languages: python (numpy/pandas/matplotlib/sympy/scipy), javascript (Node.js), bash, c, cpp, go, lua
 - Document generation packages: reportlab, openpyxl, python-docx, python-pptx
-- Constraints: --network none, 256MB memory, 1 CPU, 256 PID limit, read-only rootfs, tmpfs /tmp:size=150m
+- Constraints: --network none, 256MB memory, 1 CPU, 256 PID limit, read-only rootfs, tmpfs /tmp:size=150m, MAX_OUTPUT 8000 bytes per stream
 - Direct execution via /api/run-code REST endpoint (Code Playground at /code route)
 - LLM execution via run_code tool (chat + code chat) and generate_document tool
 - Code Playground: /code route with split-pane layout, line numbers, AI chat overlay (/ws/code-chat)
+- Syntax highlighting: highlight.js overlay (transparent textarea over highlighted pre/code layer, debounced 50ms)
+- Resizable split pane: drag handle between editor and output, persisted to localStorage (25-85% range, double-click resets to 55/45)
+- Auto-save: debounced 2s save to localStorage with "Saved" indicator in footer
+- Output files: sandbox-generated files displayed as downloadable links with inline image preview
+- Copy/download buttons: copy code to clipboard, download as file with correct extension
+- Word wrap toggle: persisted preference, applies to both textarea and highlight layer
 - Code chat: isolated WebSocket, code-focused prompt (config/code-prompt.txt), run_code tool only, no memory
+- Code chat reuses ThinkingBlock and ToolCallBlock components for expandable thinking and inline tool results
 - Auto language detection on paste (C/C++/Go/JS/Bash/Lua/HTML/SVG/CSS/Markdown/Python)
 - Markup languages (HTML/CSS/SVG/Markdown) auto-preview in iframe, no Run button
 - MEDIA_HOST_DIR env var (set to ${PWD}/media in docker-compose.yml) used for sandbox bind mount extraction
@@ -222,17 +230,33 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Context format: `id=xxx | [priority] "Title"` — ID leads each line to prevent LLM ID-title confusion
 - Frontend: /tracker route with full-width list + slide-in overlay panels (TaskDetail, NoteEditor, TrackerChat)
 - Auto-save: debounce at 800ms, save on close/unmount via onDestroy
+- Task search: free-text search across title, description, and tags in filter bar
+- Collapsible subtasks: subtask count badge toggles inline expansion (default collapsed)
+- Inline title editing: double-click task title to edit in place (desktop only, Enter saves, Escape cancels)
+- Undo delete: optimistic removal with 5-second undo toast, DELETE API deferred until timeout
+- Keyboard navigation: j/k (move), Enter (open detail), x (cycle status), n (focus quick-add), / (focus search)
+- Escape key closes tracker overlays in z-index order (TrackerChat → TaskDetail/NoteEditor)
+- TrackerChat uses ThinkingBlock component for expandable thinking (replaces 120-char truncation)
 
 ## UI Features
 - 9 Nintendo console themes with per-console sounds, screen effects, boot animations
 - CSS targeting uses data-role attribute on msg-appear (Lightning CSS strips :has() selectors)
-- Toast notification system: global toast store + component
-- Keyboard shortcuts: Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+Shift+S (toggle sidebar), Ctrl+/ (focus input), Escape (close modals)
+- Toast notification system: global toast store + component, supports optional action button (used for undo)
+- Keyboard shortcuts: Ctrl+Shift+N (new chat), Ctrl+Shift+T (toggle think), Ctrl+Shift+S (toggle sidebar), Ctrl+/ (focus input), Escape (close modals/overlays)
 - Regenerate response: hover last assistant message → regenerate button
 - Message editing: hover user message → edit button → inline textarea → Save truncates and resubmits
 - Response history: regenerate/edit preserves variants with < 1/N > navigation arrows
 - Streaming markdown: debounced at 150ms, final parse on stream end
 - Icon rail navigation: Chat, Tasks, Code, Settings in left sidebar
+- Scroll-to-bottom FAB: floating chevron button appears when user scrolls up, click to return to latest
+- Mobile swipe gestures: swipe right from left edge opens sidebar, swipe left closes (via swipe.ts action)
+- Mobile message actions: edit/copy/regenerate always visible at 50% opacity on touch devices (no hover needed)
+- Sidebar skeleton loaders: 5 animated placeholder items shown during initial conversation list load
+- Conversation loading indicator: centered spinner when switching conversations
+- Modal focus trapping: Tab key wraps within modal, focus restored on close (via focusTrap.ts action)
+- prefers-reduced-motion: all CSS animations disabled for users who request reduced motion
+- Responsive message width: user bubbles max-w-[85%] on mobile, 75% on tablet, 65% on desktop
+- Animation optimization: msg-appear class only applied to last 3 messages when conversation exceeds 20 messages
 
 ## Non-Obvious Facts
 - Model always thinks — enable_thinking controls whether reasoning is in a separate field
@@ -245,6 +269,9 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Recitation pipeline is CPU-only (SearXNG search + web fetch), no VRAM impact
 - Pattern system is CPU-only (text matching + YAML parsing), no VRAM impact
 - Code chat and tracker have isolated WebSocket handlers — they do NOT use the pattern router
+- WebSocket origin validation: origins.py allowlist rejects connections from unknown origins (code 4003)
+- CORS: explicit allowlist (ALLOWED_ORIGINS env var), not wildcard
+- nginx security headers: X-Content-Type-Options nosniff, X-Frame-Options SAMEORIGIN
 
 ## Documentation Sync Mandate (MANDATORY)
 

@@ -341,6 +341,7 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │   ├── search.py                      # SearXNG proxy
 │   │   ├── tts.py                         # Qwen3-TTS proxy (voice cloning support)
 │   │   ├── web_fetch.py                   # Page fetcher — HTTP GET + BeautifulSoup text extraction
+│   │   ├── origins.py                    # WebSocket origin validation allowlist
 │   │   └── tools.py                       # Tool definitions, registry, and dispatch (web_search, memory, run_code, generate_document)
 │   ├── ui/
 │   │   ├── Dockerfile                     # Node build → nginx serve
@@ -365,6 +366,8 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   │           ├── ws/code-client.ts     # Code Playground AI chat WebSocket client
 │   │           ├── utils/sanitize.ts      # HTML sanitization
 │   │           ├── actions/highlight.ts   # Code syntax highlighting
+│   │           ├── actions/focusTrap.ts  # Modal focus trapping action
+│   │           ├── actions/swipe.ts      # Mobile swipe gesture action
 │   │           └── components/
 │   │               ├── ChatArea.svelte    # Main chat area (8 suggestion cards)
 │   │               ├── ChatInput.svelte   # Input with Think/Voice Studio pills

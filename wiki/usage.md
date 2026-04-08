@@ -239,13 +239,22 @@ The Code Playground is a dedicated split-pane coding environment with a built-in
 - Can execute code via the `run_code` tool — responses include syntax-highlighted code blocks with Copy buttons
 - Fully isolated from main chat — no shared history, no memory tools
 
+**Editor features:**
+- **Syntax highlighting** — real-time code coloring via highlight.js overlay (same theme as chat code blocks)
+- **Resizable split pane** — drag the divider between editor and output panels; double-click to reset to default 55/45 split. Position persists across sessions.
+- **Auto-save** — code saves to localStorage after 2 seconds of inactivity with a "Saved" indicator in the footer
+- **Copy button** — copy code to clipboard from the editor header
+- **Download button** — save code as a file with the correct extension (.py, .js, .sh, etc.)
+- **Word wrap toggle** — switch between wrapped and horizontal-scroll modes (persisted)
+- **Output files** — when code generates files (e.g., matplotlib plots), they appear as downloadable links with inline image preview
+
 **Shortcuts:**
 - **Ctrl+Enter** — Run code
 - **Tab** — Insert 4 spaces (instead of moving focus)
 
 **Timeout options** (executable only): 5s, 10s, 20s, 30s (default 10s)
 
-Code resets to a clean state each time you navigate to `/code`.
+Code persists per-language in localStorage and restores when you return.
 
 ## Document Generation
 
@@ -328,11 +337,22 @@ The Tracker is a built-in task and note management system with LLM integration. 
 - Card-based task list with colored left borders indicating priority (red=urgent, accent=high, yellow=medium, dim=low)
 - SVG status circles: click to cycle through todo → active → done
 - Filter by status (with counts), tag (dropdown), and sort by priority or due date
+- **Free-text search** — search across task titles, descriptions, and tags from the filter bar
 - Auto-save: edits in the detail panel save automatically after 800ms
 - Segmented controls for status and priority, tag pills with Enter/comma to add
-- Subtask progress shown as "2/5" on parent tasks
+- **Collapsible subtasks** — click the subtask count badge (e.g., "2/5") to expand/collapse inline subtasks
+- **Inline title editing** — double-click a task title to edit in place (Enter saves, Escape cancels; desktop only)
+- **Undo delete** — deleting a task shows a toast with "Undo" button; the actual deletion is deferred 5 seconds
 - Overdue tasks highlighted with a red ring and red due-date pill
 - Set recurrence (daily, weekly, biweekly, monthly, yearly) for repeating tasks
+
+**Keyboard navigation** (active when no input is focused):
+- **j** / **ArrowDown** — move to next task
+- **k** / **ArrowUp** — move to previous task
+- **Enter** — open detail overlay for focused task
+- **x** — cycle status of focused task
+- **n** — focus the quick-add input
+- **/** — focus the search input
 
 **Notes:**
 - Card-based note list with pinned notes visually distinguished (accent tint)
@@ -407,15 +427,23 @@ Access via the **Settings** icon at the bottom of the left navigation rail.
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| **Ctrl+Shift+N** | New conversation |
-| **Ctrl+Shift+T** | Toggle thinking mode |
-| **Ctrl+Shift+S** | Toggle sidebar |
-| **Ctrl+/** | Focus chat input |
-| **Escape** | Close any open modal |
+| Shortcut | Context | Action |
+|----------|---------|--------|
+| **Ctrl+Shift+N** | Global | New conversation |
+| **Ctrl+Shift+T** | Global | Toggle thinking mode |
+| **Ctrl+Shift+S** | Global | Toggle sidebar |
+| **Ctrl+/** | Global | Focus chat input |
+| **Escape** | Global | Close any open modal or overlay |
+| **Ctrl+Enter** | Code Playground | Run code |
+| **Tab** | Code Playground | Insert 4 spaces |
+| **j** / **↓** | Tracker (no input focused) | Move to next task |
+| **k** / **↑** | Tracker (no input focused) | Move to previous task |
+| **Enter** | Tracker (task focused) | Open detail overlay |
+| **x** | Tracker (task focused) | Cycle task status |
+| **n** | Tracker (no input focused) | Focus quick-add input |
+| **/** | Tracker (no input focused) | Focus search input |
 
-Shortcuts use Ctrl on Linux/Windows and Cmd on macOS. Most shortcuts don't fire while typing in an input field (exceptions: Escape and Ctrl+/ work from anywhere).
+Global shortcuts use Ctrl on Linux/Windows and Cmd on macOS. Tracker and Code Playground shortcuts only fire when no input/textarea is focused (exceptions: Escape and Ctrl+/ work from anywhere).
 
 ## Remote Access via Tailscale
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-07
 **Auditor:** Claude Code (Opus 4.6)
-**Build:** Gizmo-AI V5.11
+**Build:** Gizmo-AI V5.12
 **Scope:** Full codebase audit — orchestrator (17 files, ~4,800 LOC), UI (44 files, ~7,800 LOC), infrastructure (6 services, all configs, all scripts)
 
 ---
