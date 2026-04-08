@@ -43,3 +43,6 @@ prompts/
 
 # Tasks (local only)
 tasks/
+
+# Auditor scratch (wiki clone)
+.wiki-published/
