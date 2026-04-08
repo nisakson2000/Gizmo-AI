@@ -23,7 +23,7 @@ services:
     port: 3100
     host_port: 3100
     gpu: false
-    health: /
+    health: /health
     description: "SvelteKit web UI served via nginx"
 
   searxng:

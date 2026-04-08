@@ -38,5 +38,8 @@ build/
 # Claude Code sessions
 .claude/
 
+# Development prompts (local only)
+prompts/
+
 # Tasks (local only)
 tasks/
