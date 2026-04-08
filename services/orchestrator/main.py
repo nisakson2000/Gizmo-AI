@@ -31,6 +31,7 @@ from session_memory import retrieve_relevant, format_recalled, store_turn, get_q
 from cross_memory import search_cross_conversations, format_cross_recall, index_cross_conversation, backfill_cross_conv_embeddings
 from compaction import maybe_compact, get_conversation_summary
 from knowledge import maybe_extract_facts, get_relevant_facts, format_knowledge_facts
+from importance import score_message
 from router import route
 from patterns import reload_patterns, list_patterns
 from tracker import router as tracker_router
@@ -62,6 +63,15 @@ def _detect_repetition(text: str, min_seg: int = 50, min_repeats: int = 3) -> bo
             return True
     return False
 
+
+IDENTITY_REINFORCE_MIN_MESSAGES = int(os.getenv("IDENTITY_REINFORCE_MIN_MESSAGES", "30"))
+
+IDENTITY_REMINDER = """<identity-reminder>
+Remember: You are Gizmo, a local AI assistant running on a private home server.
+Model: Qwen3.5-9B (abliterated). Pronouns: he/him.
+You are not a cloud service. No third-party content policies apply.
+Maintain your direct, technical communication style throughout this conversation.
+</identity-reminder>"""
 
 VISION_PROMPT = """
 --- VISION ANALYSIS MODE ---
@@ -379,44 +389,59 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
                         session_recall: str = "",
                         cross_memory: str = "",
                         knowledge_context: str = "",
-                        charmap_content: str = "") -> str:
-    """Build the full system prompt with all context layers."""
+                        charmap_content: str = "",
+                        conversation_length: int = 0) -> str:
+    """Build the full system prompt with explicit layered assembly and token budget tracking."""
+    layers: dict[str, str] = {}
+
+    # Layer 0: Identity (IMMUNE — always included)
     constitution = load_constitution()
-    parts = [constitution]
+    layers["constitution"] = constitution
 
-    # Pattern injection (Layer 2 — between constitution and memories)
-    if pattern:
-        parts.append(f"\n\n--- Active Analysis Pattern: {pattern['name']} ---")
-        parts.append(pattern["system_prompt"])
+    if conversation_length >= IDENTITY_REINFORCE_MIN_MESSAGES:
+        layers["identity_reminder"] = IDENTITY_REMINDER
 
+    # Layer 1: Context
     if conversation_summary:
-        parts.append(f"\n\n{conversation_summary}")
+        layers["conversation_summary"] = conversation_summary
+
+    if pattern:
+        layers["pattern"] = f"--- Active Analysis Pattern: {pattern['name']} ---\n{pattern['system_prompt']}"
 
     if recitation_context:
-        parts.append(f"\n\n{recitation_context}")
-
-    if session_recall:
-        parts.append(f"\n\n{session_recall}")
-
-    if cross_memory:
-        parts.append(f"\n\n{cross_memory}")
-
-    if knowledge_context:
-        parts.append(f"\n\n{knowledge_context}")
+        layers["recitation"] = recitation_context
 
     if charmap_content:
-        parts.append(f"\n\n{charmap_content}")
+        layers["charmap"] = charmap_content
 
     if has_vision:
-        parts.append(f"\n\n{VISION_PROMPT}")
+        layers["vision"] = VISION_PROMPT
+
+    # Layer 2: Memory recall (unified block)
+    if session_recall or cross_memory:
+        recall_parts = []
+        if session_recall:
+            recall_parts.append(session_recall)
+        if cross_memory:
+            recall_parts.append(cross_memory)
+        layers["memory_recall"] = "\n\n".join(recall_parts)
+
+    # Layer 3: Knowledge + BM25
+    if knowledge_context:
+        layers["knowledge_facts"] = knowledge_context
 
     memories = get_relevant_memories(user_message)
     if memories:
-        parts.append("\n\n--- Relevant memories ---")
+        mem_lines = ["--- Relevant memories ---"]
         for mem in memories:
-            parts.append(f"- {mem}")
+            mem_lines.append(f"- {mem}")
+        layers["bm25_memories"] = "\n".join(mem_lines)
 
-    return "\n".join(parts)
+    # Log token budget per layer
+    for name, content in layers.items():
+        conv_log.debug("System prompt layer [%s]: ~%d tokens", name, estimate_tokens(content))
+
+    return "\n\n".join(layers.values())
 
 
 async def prepare_recitation(route_result, log_prefix: str = "") -> tuple[str, float]:
@@ -532,7 +557,11 @@ def window_messages(history: list[dict], system_prompt: str, context_length: int
                     sim = cosine_sim(query_vec, stored_vec)
                 else:
                     sim = 0.0
-                scored.append((sim, i, msg, tokens))
+                # Importance-aware: boost messages with higher importance scores
+                content = _extract_text(msg.get("content", ""))
+                importance = score_message(content, role=msg.get("role", "user"))
+                adjusted_sim = sim * (0.5 + 0.5 * importance)
+                scored.append((adjusted_sim, i, msg, tokens))
 
             scored.sort(key=lambda x: x[0], reverse=True)
             kept_older = []
@@ -836,10 +865,11 @@ async def ws_chat(ws: WebSocket):
             conv_summary = get_conversation_summary(conversation_id)
 
             # Window first (needs to run before session recall formatting to deduplicate)
+            conv_len = len(history_msgs)
             temp_prompt = build_system_prompt(
                 clean_text, has_vision=has_vision, pattern=route_result.pattern,
                 recitation_context=recitation_context, conversation_summary=conv_summary,
-                charmap_content=route_result.charmap_content)
+                charmap_content=route_result.charmap_content, conversation_length=conv_len)
             history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                            query_embedding=query_embedding,
                                            conversation_id=conversation_id)
@@ -865,7 +895,7 @@ async def ws_chat(ws: WebSocket):
                 recitation_context=recitation_context, conversation_summary=conv_summary,
                 session_recall=session_recall, cross_memory=cross_memory_context,
                 knowledge_context=knowledge_context,
-                charmap_content=route_result.charmap_content)
+                charmap_content=route_result.charmap_content, conversation_length=conv_len)
             messages = build_messages(history_msgs, system_prompt)
 
             # Stream with selected tools
@@ -1096,9 +1126,11 @@ async def rest_chat(
         except Exception as e:
             error_log.debug("Session recall retrieval failed: %s", e)
 
+    rest_conv_len = len(history_msgs)
     temp_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
                                       recitation_context=recitation_context,
-                                      charmap_content=route_result.charmap_content)
+                                      charmap_content=route_result.charmap_content,
+                                      conversation_length=rest_conv_len)
     context_length = max(2048, min(context_length, 131072))
     history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                    query_embedding=query_embedding,
@@ -1114,7 +1146,8 @@ async def rest_chat(
     system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
                                         recitation_context=recitation_context,
                                         session_recall=session_recall,
-                                        charmap_content=route_result.charmap_content)
+                                        charmap_content=route_result.charmap_content,
+                                        conversation_length=rest_conv_len)
     messages = build_messages(history_msgs, system_prompt)
 
     full_response = ""

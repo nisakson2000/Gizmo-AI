@@ -201,10 +201,11 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Cleanup: session_embeddings deleted on conversation prune, single delete, and partial delete (edit/regenerate)
 - File: session_memory.py (embed_text, store_turn, retrieve_relevant, format_recalled, get_query_embedding, get_stored_embeddings)
 
-## Smart History Windowing
+## Smart History Windowing (importance-aware)
 - window_messages() uses semantic scoring when query embedding is available
 - Always keeps the last 6 messages (3 user-assistant pairs) for recency
 - Scores older messages by cosine similarity to the current query using stored embeddings
+- **Importance-aware**: adjusted_sim = sim * (0.5 + 0.5 * importance) — tool call messages score higher than casual "ok" at similar relevance
 - Fills remaining token budget with highest-scoring older messages in chronological order
 - Falls back to FIFO (drop oldest) when embeddings are unavailable or conversation is short
 - Query embedding computed via asyncio.to_thread to avoid blocking the event loop
@@ -287,10 +288,24 @@ Explicit pattern invocation: prefix message with `[pattern:name]` (stripped befo
 - Injected as `<character-analysis>` XML block in system prompt between session_recall and vision
 - Solves tokenizer blindness: LLMs see subword tokens, not individual characters
 
+## Identity Reinforcement
+- Identity reminder block (~80 tokens) injected for conversations with 30+ messages
+- Reinforces Gizmo identity, model name, and communication style
+- Gate: `IDENTITY_REINFORCE_MIN_MESSAGES` env var (default 30, set to 999999 to disable)
+
 ## Constitution & Epistemic Honesty
-- XML-tagged sections: `<identity>`, `<output-formatting>`, `<tool-discipline>`, `<web-search>`, `<response-quality>`, `<precision-awareness>`, `<epistemic-honesty>`, `<code-execution>`, `<document-generation>`, `<patterns>`
+- XML-tagged sections: `<identity>`, `<style>`, `<capabilities>`, `<tool-discipline>`, `<patterns>`, `<memory-rules>`, `<code-execution>`, `<document-generation>`, `<web-search>`, `<response-quality>`, `<precision-awareness>`, `<epistemic-honesty>`, `<memory-awareness>`, `<topic-awareness>`, `<knowledge-awareness>`
+- `<memory-awareness>`: teaches model how to use conversation summaries, cross-conv recall, and knowledge facts; prevents hallucination on missing context
+- `<topic-awareness>`: prevents topic lock-in — model follows new topics directly without forcing connections to previous topics
+- `<knowledge-awareness>`: teaches model to use knowledge facts naturally, avoid re-asking known answers, gently verify potentially outdated facts
 - `<epistemic-honesty>` section: distinguishes retrieved content (present exactly), session recall (authoritative record), and training knowledge (confident but flag genuine uncertainty)
-- System prompt layer order: constitution → pattern → conversation_summary → recitation → session_recall → cross_conv_recall → knowledge_facts → charmap → vision → memories
+
+## System Prompt Layers (build_system_prompt)
+Explicit layered assembly with per-layer token budget logging:
+- **L0 (IMMUNE)**: constitution + identity reminder (30+ msgs)
+- **L1 (Context)**: conversation_summary, pattern, recitation, charmap, vision
+- **L2 (Memory recall)**: unified block combining session_recall + cross_conv_recall
+- **L3 (Knowledge)**: knowledge_facts + BM25 memories
 
 ## Tracker Module
 - SQLite database at /app/tracker/tracker.db (tasks + notes tables)
