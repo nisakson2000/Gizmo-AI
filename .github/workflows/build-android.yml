@@ -81,4 +81,5 @@ jobs:
         with:
           name: "Gizmo AI for Android — ${{ github.ref_name }}"
           body: ${{ steps.notes.outputs.body }}
+          make_latest: "true"
           files: mobile/android/app/build/outputs/apk/debug/gizmo-ai.apk
