@@ -43,4 +43,19 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          name: "Gizmo AI for Android — ${{ github.ref_name }}"
+          generate_release_notes: true
+          body: |
+            ## Gizmo AI for Android
+
+            Native Android app for one-tap access to your Gizmo-AI instance.
+
+            ### Install
+
+            1. Download **gizmo-ai.apk** below
+            2. Enable "Install unknown apps" on your Android device
+            3. Open the APK and install
+            4. Launch Gizmo AI, enter your server URL, and connect
+
+            **Requirements:** Android 8.0+ • A running Gizmo-AI server • HTTPS for voice input
           files: mobile/android/app/build/outputs/apk/debug/gizmo-ai.apk
