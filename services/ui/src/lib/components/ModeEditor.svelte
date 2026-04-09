@@ -112,13 +112,14 @@
 			toast('Name and label are required', 'error');
 			return;
 		}
+		const slug = newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 		saving = true;
 		try {
 			const resp = await fetch('/api/modes', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					name: newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+					name: slug,
 					label: newLabel.trim(),
 					description: newDescription.trim(),
 					system_prompt: newPrompt,
@@ -128,7 +129,7 @@
 				toast('Mode created', 'success');
 				creating = false;
 				await refreshModes();
-				await selectMode(newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+				await selectMode(slug);
 			} else {
 				const err = await resp.json().catch(() => null);
 				toast(err?.detail || 'Create failed', 'error');

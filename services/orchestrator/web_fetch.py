@@ -22,14 +22,13 @@ async def fetch_page(url: str, timeout: float = 15.0) -> str:
             max_redirects=5,
             headers={"User-Agent": "Mozilla/5.0 (compatible; Gizmo/1.0)"},
         ) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-
-        # Reject non-text content types (PDFs, images, etc.)
-        content_type = resp.headers.get("content-type", "")
-        if not any(t in content_type for t in ("text/", "application/xhtml", "application/xml")):
-            logger.warning("fetch_page skipped non-text content-type %s for %s", content_type, url)
-            return ""
+            async with client.stream("GET", url) as resp:
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if not any(t in content_type for t in ("text/", "application/xhtml", "application/xml")):
+                    logger.warning("fetch_page skipped non-text content-type %s for %s", content_type, url)
+                    return ""
+                await resp.aread()
 
         soup = BeautifulSoup(resp.text, "html.parser")
         for tag in soup.find_all(["script", "style", "nav", "footer", "header"]):

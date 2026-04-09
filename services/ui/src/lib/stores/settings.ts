@@ -34,4 +34,5 @@ export async function refreshModes() {
 		// Keep existing modes on error
 	}
 }
+
 export const focusTrigger = writable(0);
