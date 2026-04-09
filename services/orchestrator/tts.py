@@ -1,4 +1,4 @@
-"""Qwen3-TTS proxy — batch and streaming text-to-speech."""
+"""faster-qwen3-tts proxy — batch and streaming text-to-speech."""
 
 import asyncio
 import json
@@ -27,7 +27,7 @@ async def synthesize(
     speed: float = 1.0,
     language: str = "Auto",
 ) -> Optional[bytes]:
-    """Generate speech from text via Qwen3-TTS.
+    """Generate speech from text via faster-qwen3-tts (batch mode).
 
     Returns audio bytes or None on failure.
     If voice_clone_data_url is provided (base64 data URL), use it for voice cloning.
@@ -58,7 +58,7 @@ async def synthesize(
                 resp.raise_for_status()
                 return resp.content
         except httpx.ConnectError:
-            logger.error("Qwen3-TTS not reachable at %s", TTS_URL)
+            logger.error("TTS server not reachable at %s", TTS_URL)
             return None
         except httpx.HTTPStatusError as e:
             if attempt == 0:
@@ -132,7 +132,7 @@ async def extract_voice_embedding(voice_id: str) -> bool:
 
 
 async def check_health() -> bool:
-    """Check if Qwen3-TTS is available."""
+    """Check if TTS server is available."""
     try:
         url = f"http://{TTS_HOST}:{TTS_PORT}/health"
         async with httpx.AsyncClient(timeout=5.0) as client:

@@ -503,7 +503,7 @@ Access via the **Settings** icon at the bottom of the left navigation rail.
 |---------|-------------|
 | **Theme** | Select a visual theme (Default + 9 Nintendo console themes) |
 | **Sounds** | Toggle per-console sound effects for UI interactions |
-| **Read Responses Aloud** | Toggle spoken responses ON/OFF (Qwen3-TTS, GPU-accelerated) |
+| **Read Responses Aloud** | Toggle spoken responses ON/OFF (Qwen3-TTS with streaming, GPU-accelerated) |
 | **TTS Voice** | Select which cloned voice to use for chat TTS (default or any saved voice) |
 | **TTS Speed** | Speech speed slider: 0.5x–2.0x (default 1.0x) |
 | **TTS Language** | Language for TTS synthesis: Auto, English, Chinese, Japanese, Korean, German, French, Russian, Portuguese, Spanish, Italian |

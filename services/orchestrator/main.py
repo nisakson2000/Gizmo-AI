@@ -2101,7 +2101,7 @@ async def get_logs(log_name: str, lines: int = 100):
 
 @app.post("/api/tts")
 async def api_tts(request: Request):
-    """Synthesize speech from text via Qwen3-TTS."""
+    """Synthesize speech from text via faster-qwen3-tts."""
     try:
         body = await request.json()
     except Exception:

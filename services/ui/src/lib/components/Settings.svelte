@@ -175,7 +175,7 @@
 						<div class="flex items-center justify-between">
 							<div class="flex-1 mr-4">
 								<p class="text-sm font-medium">Read Responses Aloud</p>
-								<p class="text-xs text-text-dim mt-0.5">Qwen3-TTS, GPU-accelerated. Auto-unloads when idle.</p>
+								<p class="text-xs text-text-dim mt-0.5">Qwen3-TTS with streaming. GPU-accelerated, auto-unloads when idle.</p>
 							</div>
 							<button
 								onclick={() => ttsEnabled.update((v) => !v)}
