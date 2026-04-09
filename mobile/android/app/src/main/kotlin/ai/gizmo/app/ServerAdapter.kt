@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 class ServerAdapter(
@@ -36,12 +35,6 @@ class ServerAdapter(
         val isHttps = server.url.startsWith("https://")
         holder.httpsIcon.setImageResource(
             if (isHttps) android.R.drawable.ic_secure else android.R.drawable.ic_partial_secure
-        )
-        holder.httpsIcon.setColorFilter(
-            ContextCompat.getColor(
-                holder.itemView.context,
-                if (isHttps) R.color.text_dim else R.color.text_dim
-            )
         )
 
         holder.itemView.setOnClickListener { onClick(server) }

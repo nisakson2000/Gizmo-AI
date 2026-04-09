@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.webkit.CookieManager
-import android.webkit.DownloadListener
 import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
@@ -27,11 +26,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
@@ -83,7 +78,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         webView = findViewById(R.id.webView)
@@ -98,10 +92,9 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        // Read server info from intent
-        serverUrl = intent.getStringExtra("server_url") ?: ""
-        serverId = intent.getStringExtra("server_id") ?: ""
-        serverName = intent.getStringExtra("server_name") ?: ""
+        serverUrl = intent.getStringExtra(Server.EXTRA_URL) ?: ""
+        serverId = intent.getStringExtra(Server.EXTRA_ID) ?: ""
+        serverName = intent.getStringExtra(Server.EXTRA_NAME) ?: ""
 
         if (serverUrl.isEmpty()) {
             val default = ServerManager(this).getDefault()
@@ -120,9 +113,8 @@ class MainActivity : AppCompatActivity() {
         setupSwipeRefresh()
         setupBackHandler()
 
-        // Health check then load
         lifecycleScope.launch {
-            val healthy = checkHealth(serverUrl)
+            val healthy = checkServerHealth(serverUrl)
             if (healthy) {
                 webView.loadUrl(serverUrl)
             } else {
@@ -304,43 +296,11 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private suspend fun checkHealth(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val url = URL("$baseUrl/health")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-
-            if (conn is javax.net.ssl.HttpsURLConnection) {
-                val trustAll = arrayOf(object : javax.net.ssl.X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-                })
-                val sc = javax.net.ssl.SSLContext.getInstance("TLS")
-                sc.init(null, trustAll, java.security.SecureRandom())
-                conn.sslSocketFactory = sc.socketFactory
-                conn.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, _ -> true }
-            }
-
-            try {
-                val code = conn.responseCode
-                if (code != 200) return@withContext false
-                val body = conn.inputStream.bufferedReader().readText()
-                body.contains("ok", ignoreCase = true)
-            } finally {
-                conn.disconnect()
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     private fun launchError() {
         startActivity(Intent(this, ErrorActivity::class.java).apply {
-            putExtra("server_id", serverId)
-            putExtra("server_url", serverUrl)
-            putExtra("server_name", serverName)
+            putExtra(Server.EXTRA_ID, serverId)
+            putExtra(Server.EXTRA_URL, serverUrl)
+            putExtra(Server.EXTRA_NAME, serverName)
         })
         @Suppress("DEPRECATION")
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out)

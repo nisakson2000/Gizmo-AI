@@ -12,14 +12,10 @@ class OnboardingActivity : AppCompatActivity() {
     private val addServerLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { _ ->
-        // If a server was added during onboarding, AddServerActivity handles navigation
-        // But if user pressed back, check if we should still finish
-        if (ServerManager(this).getServers().isNotEmpty()) {
-            val server = ServerManager(this).getDefault() ?: return@registerForActivityResult
-            startActivity(Intent(this, MainActivity::class.java).apply {
-                putExtra("server_id", server.id)
-                putExtra("server_url", server.url)
-                putExtra("server_name", server.name)
+        val manager = ServerManager(this)
+        if (manager.getServers().isNotEmpty()) {
+            val server = manager.getDefault() ?: return@registerForActivityResult
+            startActivity(Intent(this, MainActivity::class.java).putServerExtras(server).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             })
             finish()
@@ -35,7 +31,6 @@ class OnboardingActivity : AppCompatActivity() {
         val subtitle = findViewById<TextView>(R.id.subtitle)
         val btnGetStarted = findViewById<MaterialButton>(R.id.btnGetStarted)
 
-        // Sequential entrance animation
         icon.animate().alpha(1f).setDuration(300).setStartDelay(100).start()
         title.animate().alpha(1f).setDuration(300).setStartDelay(250).start()
         subtitle.animate().alpha(1f).setDuration(300).setStartDelay(250).start()
@@ -48,7 +43,7 @@ class OnboardingActivity : AppCompatActivity() {
 
         btnGetStarted.setOnClickListener {
             val intent = Intent(this, AddServerActivity::class.java).apply {
-                putExtra("onboarding", true)
+                putExtra(Server.EXTRA_ONBOARDING, true)
             }
             addServerLauncher.launch(intent)
         }

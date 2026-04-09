@@ -17,11 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 class AddServerActivity : AppCompatActivity() {
 
@@ -33,8 +29,8 @@ class AddServerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_server)
 
-        isOnboarding = intent.getBooleanExtra("onboarding", false)
-        editServerId = intent.getStringExtra("edit_server_id")
+        isOnboarding = intent.getBooleanExtra(Server.EXTRA_ONBOARDING, false)
+        editServerId = intent.getStringExtra(Server.EXTRA_EDIT_ID)
 
         val heading = findViewById<TextView>(R.id.heading)
         val nameInput = findViewById<TextInputEditText>(R.id.nameInput)
@@ -57,7 +53,6 @@ class AddServerActivity : AppCompatActivity() {
             }
         }
 
-        // Show HTTPS info when URL is HTTP
         urlInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -74,7 +69,6 @@ class AddServerActivity : AppCompatActivity() {
                         httpsInfo.visibility = View.GONE
                     }.start()
                 }
-                // Reset connection test on URL change
                 connectionTested = false
                 updateSaveButton(btnSave)
             }
@@ -86,7 +80,6 @@ class AddServerActivity : AppCompatActivity() {
             val url = normalizeUrl(rawUrl)
             urlInput.setText(url)
 
-            // Show testing state
             statusArea.visibility = View.VISIBLE
             statusProgress.visibility = View.VISIBLE
             statusIcon.visibility = View.GONE
@@ -95,7 +88,7 @@ class AddServerActivity : AppCompatActivity() {
             btnTest.isEnabled = false
 
             lifecycleScope.launch {
-                val success = testConnection(url)
+                val success = checkServerHealth(url)
                 btnTest.isEnabled = true
 
                 if (success) {
@@ -114,7 +107,6 @@ class AddServerActivity : AppCompatActivity() {
                     statusIcon.setColorFilter(ContextCompat.getColor(this@AddServerActivity, R.color.error))
                     statusText.text = getString(R.string.connection_failed)
                     statusText.setTextColor(ContextCompat.getColor(this@AddServerActivity, R.color.error))
-                    // Shake the status area
                     ObjectAnimator.ofFloat(statusArea, "translationX", 0f, 10f, -10f, 10f, -10f, 0f).apply {
                         duration = 200
                         interpolator = CycleInterpolator(1f)
@@ -152,10 +144,7 @@ class AddServerActivity : AppCompatActivity() {
             }
 
             if (isOnboarding) {
-                startActivity(Intent(this, MainActivity::class.java).apply {
-                    putExtra("server_id", server.id)
-                    putExtra("server_url", server.url)
-                    putExtra("server_name", server.name)
+                startActivity(Intent(this, MainActivity::class.java).putServerExtras(server).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 })
             } else {
@@ -176,39 +165,5 @@ class AddServerActivity : AppCompatActivity() {
             url = "https://$url"
         }
         return url.trimEnd('/')
-    }
-
-    private suspend fun testConnection(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val url = URL("$baseUrl/health")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "GET"
-
-            // Accept self-signed certs for LAN
-            if (conn is javax.net.ssl.HttpsURLConnection) {
-                val trustAll = arrayOf(object : javax.net.ssl.X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-                })
-                val sc = javax.net.ssl.SSLContext.getInstance("TLS")
-                sc.init(null, trustAll, java.security.SecureRandom())
-                conn.sslSocketFactory = sc.socketFactory
-                conn.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, _ -> true }
-            }
-
-            try {
-                val code = conn.responseCode
-                if (code != 200) return@withContext false
-                val body = conn.inputStream.bufferedReader().readText()
-                body.contains("ok", ignoreCase = true)
-            } finally {
-                conn.disconnect()
-            }
-        } catch (_: Exception) {
-            false
-        }
     }
 }

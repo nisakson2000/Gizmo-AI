@@ -19,11 +19,7 @@ class LauncherActivity : AppCompatActivity() {
         val servers = manager.getServers()
         val intent = when {
             servers.isEmpty() -> Intent(this, OnboardingActivity::class.java)
-            servers.size == 1 -> Intent(this, MainActivity::class.java).apply {
-                putExtra("server_id", servers[0].id)
-                putExtra("server_url", servers[0].url)
-                putExtra("server_name", servers[0].name)
-            }
+            servers.size == 1 -> Intent(this, MainActivity::class.java).putServerExtras(servers[0])
             else -> Intent(this, ServerListActivity::class.java)
         }
 

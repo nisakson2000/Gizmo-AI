@@ -36,7 +36,7 @@ class ServerListActivity : AppCompatActivity() {
         val fab = findViewById<FloatingActionButton>(R.id.fab)
 
         adapter = ServerAdapter(
-            servers = manager.getServers(),
+            servers = emptyList(),
             onClick = { server -> connectToServer(server) },
             onLongClick = { server, view -> showPopupMenu(server, view) }
         )
@@ -46,8 +46,6 @@ class ServerListActivity : AppCompatActivity() {
 
         fab.setOnClickListener { launchAddServer() }
         findViewById<View>(R.id.btnEmptyAdd).setOnClickListener { launchAddServer() }
-
-        refreshList()
     }
 
     override fun onResume() {
@@ -56,11 +54,7 @@ class ServerListActivity : AppCompatActivity() {
     }
 
     private fun connectToServer(server: Server) {
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            putExtra("server_id", server.id)
-            putExtra("server_url", server.url)
-            putExtra("server_name", server.name)
-        })
+        startActivity(Intent(this, MainActivity::class.java).putServerExtras(server))
         @Suppress("DEPRECATION")
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
     }
@@ -77,7 +71,7 @@ class ServerListActivity : AppCompatActivity() {
             when (item.itemId) {
                 1 -> {
                     val intent = Intent(this, AddServerActivity::class.java).apply {
-                        putExtra("edit_server_id", server.id)
+                        putExtra(Server.EXTRA_EDIT_ID, server.id)
                     }
                     addServerLauncher.launch(intent)
                     true
