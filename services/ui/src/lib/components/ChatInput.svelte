@@ -445,7 +445,7 @@
 			<ModeSelector />
 			<button
 				onclick={() => voiceStudioOpen.set(true)}
-				class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-bg-secondary text-text-dim border border-border/50 hover:border-border hover:text-text-secondary transition-all"
+				class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-bg-secondary text-text-dim border border-border/50 hover:border-border hover:text-text-secondary transition-all"
 				aria-label="Open voice studio"
 			>
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -454,7 +454,7 @@
 				Voice Studio
 			</button>
 			<span class="flex-1"></span>
-			<p class="text-[11px] text-text-dim">Gizmo runs entirely on your machine.</p>
+			<p class="hidden md:block text-[11px] text-text-dim">Gizmo runs entirely on your machine.</p>
 		</div>
 	</div>
 </div>

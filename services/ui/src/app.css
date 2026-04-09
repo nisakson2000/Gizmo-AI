@@ -318,6 +318,13 @@
 	}
 }
 
+/* Hide bottom nav when virtual keyboard is open (Android adjustResize) */
+@media (max-height: 500px) {
+	.mobile-nav {
+		display: none;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.msg-appear, .thinking-dot, .thinking-pulse, .streaming-cursor, .toast-appear {
 		animation: none !important;

@@ -53,3 +53,6 @@ mobile/android/gizmo-defaults.json
 # Auditor scratch
 .wiki-published/
 AUDIT.md
+
+# Session knowledge (local only)
+CLAUDE.md

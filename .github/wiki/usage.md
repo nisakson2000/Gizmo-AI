@@ -586,3 +586,12 @@ bash mobile/build-apk.sh
 ### Features in the App
 
 All web features work in the app: chat, thinking mode, file uploads (up to 500MB), mic recording, TTS playback, code playground, tracker, analytics, modes, Voice Studio, themes, and document generation. Downloads save to your device's Downloads folder.
+
+### Mobile Navigation
+
+On screens narrower than 768px (including the Android WebView), the UI adapts automatically:
+
+- **Bottom navigation bar** — 4 tabs (Chat, Tasks, Code, Stats) replace the desktop icon rail. The active route is highlighted. The bar hides when the virtual keyboard is open.
+- **Sidebar drawer** — swipe right from the left edge (or tap the hamburger) to open. Includes navigation links to Tasks, Code, Stats, Settings, and Voice Studio at the top of the drawer.
+- **Header** — a Settings gear icon appears on mobile since the desktop icon rail is hidden.
+- **Chat input toolbar** — Voice Studio button and tagline text are hidden on mobile to reduce clutter. Think mode and Mode selector remain visible.

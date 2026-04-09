@@ -4,13 +4,23 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import Settings from '$lib/components/Settings.svelte';
 	import IconRail from '$lib/components/IconRail.svelte';
+	import MobileNav from '$lib/components/MobileNav.svelte';
 	import BootSequence from '$lib/components/BootSequence.svelte';
 	import { theme } from '$lib/stores/theme';
 	import { settingsOpen, voiceStudioOpen, memoryManagerOpen, modeEditorOpen, codePlaygroundOpen, sidebarOpen } from '$lib/stores/settings';
 	import ModeEditor from '$lib/components/ModeEditor.svelte';
 	import { trackerChatOpen, selectedTaskId, selectedNoteId } from '$lib/stores/tracker';
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	let { children } = $props();
+
+	// On mobile first visit, close sidebar
+	onMount(() => {
+		if (window.innerWidth < 768 && get(sidebarOpen)) {
+			sidebarOpen.set(false);
+		}
+	});
 
 	// Apply theme to <html> element reactively
 	$effect(() => {
@@ -39,11 +49,14 @@
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
-<div class="flex h-screen bg-bg-primary">
-	<IconRail />
-	<div class="flex-1 flex flex-col overflow-hidden">
+<div class="flex flex-col md:flex-row h-dvh bg-bg-primary">
+	<div class="hidden md:flex">
+		<IconRail />
+	</div>
+	<div class="flex-1 flex flex-col overflow-hidden min-h-0">
 		{@render children()}
 	</div>
+	<MobileNav />
 </div>
 
 <Settings />
