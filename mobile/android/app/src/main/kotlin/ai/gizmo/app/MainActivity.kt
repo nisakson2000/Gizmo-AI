@@ -81,13 +81,14 @@ class MainActivity : AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        val rootLayout = findViewById<android.widget.FrameLayout>(R.id.rootLayout)
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
         progressBar = findViewById(R.id.progressBar)
         loadingOverlay = findViewById(R.id.loadingOverlay)
 
-        // Apply system bar insets to webview
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+        // Apply system bar insets to root so all children (WebView, overlay, progress) are in safe area
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(0, bars.top, 0, bars.bottom)
             insets

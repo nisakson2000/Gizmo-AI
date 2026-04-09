@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 
@@ -13,7 +12,6 @@ class GizmoBridge(private val context: Context) {
     @JavascriptInterface
     fun saveBase64(filename: String, mimeType: String, base64Data: String) {
         try {
-            val bytes = Base64.decode(base64Data, Base64.DEFAULT)
             val resolver = context.contentResolver
 
             val values = ContentValues().apply {
@@ -25,8 +23,10 @@ class GizmoBridge(private val context: Context) {
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                 ?: throw Exception("Failed to create download entry")
 
-            resolver.openOutputStream(uri)?.use { stream ->
-                stream.write(bytes)
+            // Stream decode to avoid holding full decoded byte array in memory
+            val decoder = java.util.Base64.getDecoder().wrap(base64Data.byteInputStream())
+            resolver.openOutputStream(uri)?.use { output ->
+                decoder.copyTo(output, bufferSize = 8192)
             }
 
             (context as? android.app.Activity)?.runOnUiThread {

@@ -21,7 +21,7 @@
 
         <activity
             android:name=".LauncherActivity"
-            android:theme="@style/Theme.Gizmo.Launcher"
+            android:theme="@style/Theme.Gizmo.Splash"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

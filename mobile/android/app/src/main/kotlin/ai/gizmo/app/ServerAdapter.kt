@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 
 class ServerAdapter(
@@ -12,6 +13,16 @@ class ServerAdapter(
     private val onClick: (Server) -> Unit,
     private val onLongClick: (Server, View) -> Unit
 ) : RecyclerView.Adapter<ServerAdapter.ViewHolder>() {
+
+    private class ServerDiffCallback(
+        private val old: List<Server>,
+        private val new: List<Server>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize() = old.size
+        override fun getNewListSize() = new.size
+        override fun areItemsTheSame(oldPos: Int, newPos: Int) = old[oldPos].id == new[newPos].id
+        override fun areContentsTheSame(oldPos: Int, newPos: Int) = old[oldPos] == new[newPos]
+    }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val name: TextView = view.findViewById(R.id.serverName)
@@ -47,7 +58,8 @@ class ServerAdapter(
     override fun getItemCount() = servers.size
 
     fun updateServers(newServers: List<Server>) {
+        val diff = DiffUtil.calculateDiff(ServerDiffCallback(servers, newServers))
         servers = newServers
-        notifyDataSetChanged()
+        diff.dispatchUpdatesTo(this)
     }
 }
