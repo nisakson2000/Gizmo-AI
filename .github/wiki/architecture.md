@@ -467,6 +467,34 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   ├── health.sh                          # Check all service health
 │   ├── build-llamacpp.sh                  # Build llama.cpp image
 │   └── download-model.sh                  # Download model from HuggingFace
+├── mobile/
+│   ├── Dockerfile                         # Android build environment (JDK 17 + Android SDK)
+│   ├── build-apk.sh                       # One-command Podman APK build
+│   └── android/                           # Android project
+│       ├── build.gradle.kts               # Root Gradle config (AGP 8.10.0, Kotlin 2.0.21)
+│       ├── settings.gradle.kts            # Project settings
+│       ├── gradlew                        # Gradle wrapper
+│       ├── gizmo-defaults.json.example    # Template for build-time server defaults
+│       └── app/
+│           ├── build.gradle.kts           # App module (ai.gizmo.app, minSdk 26, targetSdk 35)
+│           └── src/main/
+│               ├── AndroidManifest.xml    # Permissions, activities, network security config
+│               ├── kotlin/ai/gizmo/app/   # Kotlin source (10 files)
+│               │   ├── Server.kt          # Data class
+│               │   ├── ServerManager.kt   # SharedPreferences CRUD + defaults import
+│               │   ├── LauncherActivity.kt # Transparent router
+│               │   ├── OnboardingActivity.kt # Welcome screen
+│               │   ├── AddServerActivity.kt  # Add/edit server with connection test
+│               │   ├── ServerListActivity.kt # Multi-server list
+│               │   ├── ServerAdapter.kt   # RecyclerView adapter
+│               │   ├── MainActivity.kt    # WebView host
+│               │   ├── ErrorActivity.kt   # Connection failure
+│               │   └── GizmoBridge.kt     # JS bridge for blob downloads
+│               ├── res/layout/            # 6 layout XMLs
+│               ├── res/values/            # colors.xml, strings.xml, themes.xml
+│               ├── res/drawable/          # Icons, rounded card shape
+│               ├── res/anim/              # Fade in/out (300ms)
+│               └── res/xml/               # Network security config (cleartext permitted)
 ├── wiki/                                  # Documentation
 ├── models/                                # Model files (gitignored)
 ├── memory/                                # Persistent memory (gitignored)

@@ -544,3 +544,45 @@ Set up HTTPS:
 ```bash
 tailscale serve --https=443 http://127.0.0.1:3100
 ```
+
+## Android App
+
+Gizmo has a native Android app that wraps the web UI in a WebView — tap the icon, you're in. No browser required.
+
+### Getting the APK
+
+Download the latest APK from [GitHub Releases](https://github.com/nisakson2000/Gizmo-AI/releases), or build from source:
+
+```bash
+bash mobile/build-apk.sh
+adb install mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### First Launch
+
+1. **Welcome screen** — tap "Get Started"
+2. **Add server** — enter a name (e.g., "Home LAN") and server URL (e.g., `http://192.168.1.100:3100`)
+3. **Test connection** — the app validates against the `/health` endpoint before saving
+4. **You're in** — the app loads the full Gizmo web UI in a WebView
+
+### Multiple Servers
+
+Add as many server profiles as you need (LAN, Tailscale, different machines). When you have 2+ servers, the app shows a server list on launch. Tap to connect, long-press to edit/delete/set default.
+
+### HTTPS and Voice Input
+
+Microphone access (Whisper STT) requires HTTPS — this is a browser/WebView security restriction. When you add an HTTP server, the app shows an info note. Use a VPN like Tailscale for remote HTTPS access.
+
+### Build-Time Defaults
+
+If you build from source, you can pre-configure servers so the APK skips onboarding:
+
+```bash
+cp mobile/android/gizmo-defaults.json.example mobile/android/gizmo-defaults.json
+# Edit with your actual server URLs
+bash mobile/build-apk.sh
+```
+
+### Features in the App
+
+All web features work in the app: chat, thinking mode, file uploads (up to 500MB), mic recording, TTS playback, code playground, tracker, analytics, modes, Voice Studio, themes, and document generation. Downloads save to your device's Downloads folder.

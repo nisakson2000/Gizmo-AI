@@ -1,0 +1,12 @@
+{
+  "servers": [
+    {
+      "name": "Home LAN",
+      "url": "http://192.168.1.100:3100"
+    },
+    {
+      "name": "Tailscale",
+      "url": "https://your-hostname.ts.net"
+    }
+  ]
+}

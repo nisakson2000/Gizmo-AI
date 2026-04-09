@@ -1,0 +1,7 @@
+.gradle/
+app/build/
+build/
+local.properties
+gizmo-defaults.json
+*.apk
+*.aab

@@ -202,6 +202,18 @@ bash scripts/start.sh            # Starts all 6 services
 
 </details>
 
+<details>
+<summary><strong>Android App</strong></summary>
+
+- **Native WebView wrapper** — tap the icon, you're in. No browser required
+- **Multi-server profiles** — connect to LAN, Tailscale, or any Gizmo instance
+- **One-tap onboarding** — connection test, HTTPS awareness, VPN setup guidance
+- **Full feature support** — file uploads, mic recording, TTS playback, downloads
+- **Build from source** — containerized Podman build, no Android Studio needed
+- **CI releases** — GitHub Actions builds APK on version tags
+
+</details>
+
 ---
 
 ## Hardware Requirements

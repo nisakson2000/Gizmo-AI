@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Gizmo" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryContainer">@color/accent_dim</item>
+        <item name="colorOnPrimary">@color/bg_primary</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">@color/bg_primary</item>
+        <item name="colorSurfaceContainer">@color/bg_secondary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:colorBackground">@color/bg_primary</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
+        <item name="colorRipple">@color/ripple_accent</item>
+        <item name="colorControlActivated">@color/accent</item>
+
+        <!-- TextInputLayout styling -->
+        <item name="textInputStyle">@style/Widget.Gizmo.TextInput</item>
+        <item name="materialButtonStyle">@style/Widget.Gizmo.Button</item>
+    </style>
+
+    <style name="Theme.Gizmo.Launcher" parent="Theme.Gizmo">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <style name="Widget.Gizmo.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/accent</item>
+        <item name="hintTextColor">@color/accent</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+    </style>
+
+    <style name="Widget.Gizmo.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">12dp</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/bg_primary</item>
+    </style>
+
+    <style name="Widget.Gizmo.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="strokeColor">@color/accent</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+    <style name="Widget.Gizmo.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+</resources>

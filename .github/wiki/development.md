@@ -162,6 +162,44 @@ podman compose build gizmo-ui && podman compose up -d --force-recreate gizmo-ui
 ```
 The Dockerfile copies the build output at image build time. Just running `up -d` will not pick up source changes.
 
+## Building the Android APK
+
+The Android app lives in `mobile/android/`. It's a Kotlin WebView wrapper — no server-side changes.
+
+### Containerized Build (Recommended)
+
+```bash
+bash mobile/build-apk.sh
+```
+
+This builds a Docker image with JDK 17 + Android SDK, then runs Gradle inside it. No Android Studio or local SDK needed. The APK appears at `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
+
+### GitHub Actions CI
+
+The workflow at `.github/workflows/build-android.yml` automatically builds the APK on version tags (`v*`) and attaches it to the GitHub Release. You can also trigger it manually via workflow dispatch.
+
+### Customizing Build-Time Defaults
+
+To ship an APK with pre-configured servers (skipping the onboarding flow):
+
+```bash
+cp mobile/android/gizmo-defaults.json.example mobile/android/gizmo-defaults.json
+# Edit with your server URLs
+bash mobile/build-apk.sh
+```
+
+The `gizmo-defaults.json` file is gitignored — it's for personal builds only. The GitHub Releases APK ships without defaults (universal).
+
+### Project Structure
+
+| Directory | Purpose |
+|-----------|---------|
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/` | Kotlin source (10 files) |
+| `mobile/android/app/src/main/res/` | Layouts, colors, themes, drawables, animations |
+| `mobile/android/app/src/main/AndroidManifest.xml` | Permissions, activities, config |
+| `mobile/Dockerfile` | Build environment (JDK 17 + Android SDK) |
+| `mobile/build-apk.sh` | One-command Podman build script |
+
 ## Future Features
 
 - **Model hot-swap** — switch models via API without restarting

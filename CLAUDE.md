@@ -59,6 +59,20 @@ Everything is containerized via Podman.
 - Logs: `podman logs -f gizmo-orchestrator`
 - Health: `curl http://localhost:9100/api/services/health`
 - Access: `http://localhost:3100` or `https://<tailscale-hostname>/` via `tailscale serve --https=443 http://127.0.0.1:3100`
+- Android APK: `bash mobile/build-apk.sh` (containerized Podman build, no Android Studio)
+
+## Mobile App (Android)
+- Directory: `mobile/android/` — Kotlin + XML layouts, WebView wrapper
+- Package: `ai.gizmo.app`, minSdk 26 (Android 8.0), targetSdk 35
+- Build: `bash mobile/build-apk.sh` (Podman-containerized, outputs debug APK)
+- CI: `.github/workflows/build-android.yml` — builds on `v*` tags, attaches APK to GitHub Release
+- Dependencies: AndroidX only (core-ktx, appcompat, lifecycle, material, swiperefreshlayout, constraintlayout)
+- Activities: LauncherActivity (router), OnboardingActivity (welcome), AddServerActivity (add/edit), ServerListActivity (multi-server), MainActivity (WebView), ErrorActivity (connectivity)
+- ServerManager: SharedPreferences + org.json for server profile CRUD
+- GizmoBridge: @JavascriptInterface for blob URL downloads via MediaStore
+- Build-time defaults: `mobile/android/gizmo-defaults.json` (gitignored) pre-populates servers if present
+- No server-side changes required — WebView loads server URL directly (same-origin)
+- VRAM impact: zero (client-side only)
 
 ## File Map — Where to Edit
 - New REST endpoint → `main.py` (add route + handler)

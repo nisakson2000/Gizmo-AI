@@ -307,3 +307,41 @@ sudo firewall-cmd --reload
 - Verify both devices are on same Tailnet: `tailscale status`
 - Check firewall: `sudo firewall-cmd --list-ports`
 - Test connection: `curl http://{tailscale-ip}:3100`
+
+---
+
+## Android App (Optional)
+
+Sideload the Gizmo Android app for one-tap access from your phone.
+
+### Install from GitHub Releases
+
+1. Download the latest `app-debug.apk` from [Releases](https://github.com/nisakson2000/Gizmo-AI/releases)
+2. On your Android device, enable "Install unknown apps" for your browser (Settings → Apps → Special access)
+3. Open the APK and install
+
+### Install via ADB
+
+```bash
+bash mobile/build-apk.sh
+adb install mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### VPN for Remote Access
+
+To use Gizmo from outside your home network, set up a VPN tunnel:
+
+- **Tailscale** — easiest option, free for personal use. Provides automatic HTTPS certificates (needed for mic access)
+- **WireGuard** — open source, manual configuration
+- **ZeroTier** — similar to Tailscale
+
+For any VPN, configure it as an always-on VPN in Android settings (Settings → Network → VPN → your VPN → Always-on VPN) for seamless access.
+
+### ALLOWED_ORIGINS
+
+When the Android app connects via a non-default URL (e.g., a Tailscale hostname that isn't already in `ALLOWED_ORIGINS`), WebSocket connections will be rejected. Add your server URL to `ALLOWED_ORIGINS` in `docker-compose.yml`:
+
+```yaml
+environment:
+  - ALLOWED_ORIGINS=http://localhost:3100,https://your-hostname.ts.net,http://192.168.1.100:3100
+```

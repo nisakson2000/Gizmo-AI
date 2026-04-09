@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gizmo AI</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Gizmo AI</string>
+    <string name="welcome_subtitle">Your local AI assistant</string>
+    <string name="get_started">Get Started</string>
+
+    <!-- Add/Edit Server -->
+    <string name="add_server">Add Server</string>
+    <string name="edit_server">Edit Server</string>
+    <string name="server_name_hint">e.g., Home LAN</string>
+    <string name="server_url_hint">https://your-server.ts.net</string>
+    <string name="https_info">Voice input requires HTTPS. Use a VPN like Tailscale for remote HTTPS access.</string>
+    <string name="test_connection">Test Connection</string>
+    <string name="testing">Testing\u2026</string>
+    <string name="connected">Connected to Gizmo</string>
+    <string name="connection_failed">Could not reach this server. Check the URL and your network connection.</string>
+    <string name="save">Save</string>
+    <string name="need_help">Need help connecting?</string>
+    <string name="help_title">Connecting to Gizmo</string>
+    <string name="help_body">Enter the URL where your Gizmo-AI server is running.\n\nLocal network:\nhttp://192.168.x.x:3100\n\nRemote access — use a VPN tunnel for access outside your home network:\n\u2022 Tailscale \u2014 easy setup, free for personal use\n\u2022 WireGuard \u2014 open source, manual configuration\n\u2022 ZeroTier \u2014 similar to Tailscale\n\nVoice input requires HTTPS. Tailscale provides free automatic HTTPS certificates.</string>
+    <string name="ok">OK</string>
+
+    <!-- Server List -->
+    <string name="no_servers">No servers saved</string>
+    <string name="add_server_button">Add Server</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="set_as_default">Set as Default</string>
+    <string name="delete_confirm_title">Delete Server</string>
+    <string name="delete_confirm_message">Remove \"%1$s\"?</string>
+
+    <!-- Main -->
+    <string name="connecting">Connecting\u2026</string>
+
+    <!-- Error -->
+    <string name="error_title">Can\'t reach your server</string>
+    <string name="error_help">Make sure your server is running and you\'re connected to your network.</string>
+    <string name="try_again">Try Again</string>
+    <string name="check_vpn">Check VPN Settings</string>
+    <string name="switch_server">Switch Server</string>
+
+    <!-- General -->
+    <string name="exit_title">Exit Gizmo?</string>
+    <string name="exit">Exit</string>
+    <string name="cancel">Cancel</string>
+</resources>

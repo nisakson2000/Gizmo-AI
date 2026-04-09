@@ -44,6 +44,12 @@ prompts/
 # Tasks (local only)
 tasks/
 
+# Android build artifacts
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/gizmo-defaults.json
+
 # Auditor scratch
 .wiki-published/
 AUDIT.md
