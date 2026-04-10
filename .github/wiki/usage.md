@@ -79,6 +79,8 @@ Gizmo can see and analyze images. Click the **paperclip button** to upload an im
 
 Supported formats: PNG, JPG, GIF, WebP (up to 50MB). The image is encoded and sent to the vision-capable model via the multimodal projector (mmproj).
 
+**Paste from clipboard:** Copy an image anywhere and paste it directly into the chat input (Ctrl+V / Cmd+V). The image uploads automatically — no file picker needed.
+
 ## Video Analysis
 
 Upload a video file and Gizmo will extract frames and analyze the visual content.

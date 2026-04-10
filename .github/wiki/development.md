@@ -194,7 +194,7 @@ The `gizmo-defaults.json` file is gitignored — it's for personal builds only. 
 
 | Directory | Purpose |
 |-----------|---------|
-| `mobile/android/app/src/main/kotlin/ai/gizmo/app/` | Kotlin source (10 files) |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/` | Kotlin source (11 files) |
 | `mobile/android/app/src/main/res/` | Layouts, colors, themes, drawables, animations |
 | `mobile/android/app/src/main/AndroidManifest.xml` | Permissions, activities, config |
 | `mobile/Dockerfile` | Build environment (JDK 17 + Android SDK) |

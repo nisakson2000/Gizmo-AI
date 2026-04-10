@@ -483,7 +483,7 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │               │   ├── Server.kt          # Data class + EXTRA_* intent constants + putServerExtras extension
 │               │   ├── ServerManager.kt   # SharedPreferences CRUD + defaults import
 │               │   ├── HealthCheck.kt     # Shared coroutine health check (trust-all SSL for LAN)
-│               │   ├── LauncherActivity.kt # Transparent router
+│               │   ├── LauncherActivity.kt # Splash screen + router
 │               │   ├── OnboardingActivity.kt # Welcome screen
 │               │   ├── AddServerActivity.kt  # Add/edit server with connection test
 │               │   ├── ServerListActivity.kt # Multi-server list
