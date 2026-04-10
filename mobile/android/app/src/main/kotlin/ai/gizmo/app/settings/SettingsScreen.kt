@@ -1,0 +1,256 @@
+package ai.gizmo.app.settings
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import ai.gizmo.app.R
+import ai.gizmo.app.model.Mode
+import ai.gizmo.app.model.ServiceHealth
+import ai.gizmo.app.ui.theme.Accent
+import ai.gizmo.app.ui.theme.BgSecondary
+import ai.gizmo.app.ui.theme.BgTertiary
+import ai.gizmo.app.ui.theme.Border
+import ai.gizmo.app.ui.theme.ErrorColor
+import ai.gizmo.app.ui.theme.Success
+import ai.gizmo.app.ui.theme.TextDim
+import ai.gizmo.app.ui.theme.TextPrimary
+import ai.gizmo.app.ui.theme.TextSecondary
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    thinkingEnabled: Boolean,
+    onThinkingChanged: (Boolean) -> Unit,
+    contextLength: Int,
+    onContextLengthChanged: (Int) -> Unit,
+    modes: List<Mode>,
+    selectedMode: String,
+    onModeSelected: (String) -> Unit,
+    serviceHealth: List<ServiceHealth>,
+    serverName: String,
+    serverUrl: String,
+    onRefreshHealth: () -> Unit,
+    onSwitchServer: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(Unit) { onRefreshHealth() }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = BgSecondary
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    stringResource(R.string.settings_title),
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel), tint = TextSecondary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Thinking mode
+            SectionHeader(stringResource(R.string.thinking_mode))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.thinking_mode),
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = thinkingEnabled,
+                    onCheckedChange = onThinkingChanged,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Accent,
+                        checkedTrackColor = Accent.copy(alpha = 0.3f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Border)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Context length
+            SectionHeader(stringResource(R.string.context_length))
+            Text(
+                text = "%,d tokens".format(contextLength),
+                color = TextSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Slider(
+                value = contextLength.toFloat(),
+                onValueChange = { onContextLengthChanged(it.toInt()) },
+                valueRange = 2048f..32768f,
+                steps = 14,
+                colors = SliderDefaults.colors(
+                    thumbColor = Accent,
+                    activeTrackColor = Accent,
+                    inactiveTrackColor = Border
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Border)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Mode selector
+            SectionHeader(stringResource(R.string.behavioral_mode))
+            Spacer(modifier = Modifier.height(8.dp))
+            modes.forEach { mode ->
+                val isSelected = mode.name == selectedMode
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onModeSelected(mode.name) }
+                        .padding(vertical = 10.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = mode.label,
+                            color = if (isSelected) Accent else TextPrimary,
+                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                        )
+                        if (mode.description.isNotEmpty()) {
+                            Text(
+                                text = mode.description,
+                                color = TextDim,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                    if (isSelected) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Accent, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Border)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Service health
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionHeader(stringResource(R.string.service_health))
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onRefreshHealth) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TextDim, modifier = Modifier.size(20.dp))
+                }
+            }
+            serviceHealth.forEach { svc ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (svc.status == "healthy") Success else ErrorColor,
+                        modifier = Modifier.size(8.dp)
+                    ) {}
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = svc.name,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = svc.status,
+                        color = if (svc.status == "healthy") Success else ErrorColor,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Border)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Server info
+            SectionHeader(stringResource(R.string.server_info))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = serverName.ifEmpty { "Server" }, color = TextPrimary)
+            Text(text = serverUrl, color = TextDim, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onSwitchServer) {
+                Text(stringResource(R.string.switch_server), color = Accent)
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        color = TextSecondary,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.5.sp
+    )
+}

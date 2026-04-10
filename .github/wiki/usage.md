@@ -549,7 +549,7 @@ tailscale serve --https=443 http://127.0.0.1:3100
 
 ## Android App
 
-Gizmo has a native Android app that wraps the web UI in a WebView — tap the icon, you're in. No browser required.
+Gizmo has a native Android app with a full chat experience — streaming responses, markdown rendering, and conversation management. Tap the icon, you're in.
 
 ### Getting the APK
 
@@ -565,15 +565,29 @@ adb install mobile/android/app/build/outputs/apk/debug/app-debug.apk
 1. **Welcome screen** — tap "Get Started"
 2. **Add server** — enter a name (e.g., "Home LAN") and server URL (e.g., `http://192.168.1.100:3100`)
 3. **Test connection** — the app validates against the `/health` endpoint before saving
-4. **You're in** — the app loads the full Gizmo web UI in a WebView
+4. **You're in** — the app connects via WebSocket and shows the chat screen
 
 ### Multiple Servers
 
 Add as many server profiles as you need (LAN, Tailscale, different machines). When you have 2+ servers, the app shows a server list on launch. Tap to connect, long-press to edit/delete/set default.
 
-### HTTPS and Voice Input
+### Chat Features
 
-Microphone access (Whisper STT) requires HTTPS — this is a browser/WebView security restriction. When you add an HTTP server, the app shows an info note. Use a VPN like Tailscale for remote HTTPS access.
+- **Streaming responses** — tokens appear in real-time as the model generates
+- **Markdown rendering** — full markdown with syntax-highlighted code blocks
+- **Thinking mode** — toggle extended thinking, view reasoning in collapsible blocks
+- **Tool calls** — web search, code execution shown as status cards
+- **Image upload** — attach images for vision analysis
+- **Document upload** — attach documents for text extraction and analysis
+- **Conversation management** — search, rename, delete with undo
+- **Mode selector** — switch between Chat, Brainstorm, Coder, Research, etc.
+- **Auto-reconnect** — exponential backoff reconnect on network interruption
+
+### Navigation
+
+- **Bottom bar** — 4 tabs: Chat (functional), Tasks, Code, Stats (coming soon)
+- **Drawer** — swipe right or tap hamburger for conversation list, search, settings
+- **Settings** — thinking toggle, context length slider, mode selector, service health
 
 ### Build-Time Defaults
 
@@ -584,16 +598,3 @@ cp mobile/android/gizmo-defaults.json.example mobile/android/gizmo-defaults.json
 # Edit with your actual server URLs
 bash mobile/build-apk.sh
 ```
-
-### Features in the App
-
-All web features work in the app: chat, thinking mode, file uploads (up to 500MB), mic recording, TTS playback, code playground, tracker, analytics, modes, Voice Studio, themes, and document generation. Downloads save to your device's Downloads folder.
-
-### Mobile Navigation
-
-On screens narrower than 768px (including the Android WebView), the UI adapts automatically:
-
-- **Bottom navigation bar** — 4 tabs (Chat, Tasks, Code, Stats) replace the desktop icon rail. The active route is highlighted. The bar hides when the virtual keyboard is open.
-- **Sidebar drawer** — swipe right from the left edge (or tap the hamburger) to open. Includes navigation links to Tasks, Code, Stats, Settings, and Voice Studio at the top of the drawer.
-- **Header** — a Settings gear icon appears on mobile since the desktop icon rail is hidden.
-- **Chat input toolbar** — Voice Studio button and tagline text are hidden on mobile to reduce clutter. Think mode and Mode selector remain visible.

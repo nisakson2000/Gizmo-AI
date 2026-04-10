@@ -471,27 +471,33 @@ Defines all service endpoints, ports, and health check paths. Used by scripts an
 │   ├── Dockerfile                         # Android build environment (JDK 17 + Android SDK)
 │   ├── build-apk.sh                       # One-command Podman APK build
 │   └── android/                           # Android project
-│       ├── build.gradle.kts               # Root Gradle config (AGP 8.10.0, Kotlin 2.0.21)
+│       ├── build.gradle.kts               # Root Gradle config (AGP 8.10.0, Kotlin 2.0.21, Compose plugin)
 │       ├── settings.gradle.kts            # Project settings
 │       ├── gradlew                        # Gradle wrapper
 │       ├── gizmo-defaults.json.example    # Template for build-time server defaults
 │       └── app/
-│           ├── build.gradle.kts           # App module (ai.gizmo.app, minSdk 26, targetSdk 35)
+│           ├── build.gradle.kts           # App module (Compose BOM, OkHttp, markdown renderer, Coil)
 │           └── src/main/
 │               ├── AndroidManifest.xml    # Permissions, activities, network security config
-│               ├── kotlin/ai/gizmo/app/   # Kotlin source (11 files)
-│               │   ├── Server.kt          # Data class + EXTRA_* intent constants + putServerExtras extension
+│               ├── kotlin/ai/gizmo/app/   # Kotlin source
+│               │   ├── Server.kt          # Data class + intent constants
 │               │   ├── ServerManager.kt   # SharedPreferences CRUD + defaults import
-│               │   ├── HealthCheck.kt     # Shared coroutine health check (trust-all SSL for LAN)
+│               │   ├── HealthCheck.kt     # Shared coroutine health check (trust-all SSL)
 │               │   ├── LauncherActivity.kt # Splash screen + router
 │               │   ├── OnboardingActivity.kt # Welcome screen
 │               │   ├── AddServerActivity.kt  # Add/edit server with connection test
 │               │   ├── ServerListActivity.kt # Multi-server list
 │               │   ├── ServerAdapter.kt   # RecyclerView adapter
-│               │   ├── MainActivity.kt    # WebView host
+│               │   ├── MainActivity.kt    # Compose host (setContent → ChatScreen)
 │               │   ├── ErrorActivity.kt   # Connection failure
-│               │   └── GizmoBridge.kt     # JS bridge for blob downloads
-│               ├── res/layout/            # 6 layout XMLs
+│               │   ├── model/             # Data classes, ViewModel, ServerEvent sealed class
+│               │   ├── network/           # OkHttp WebSocket + REST client
+│               │   ├── chat/              # Chat Compose screens (6 files)
+│               │   ├── ui/theme/          # Material3 dark theme
+│               │   ├── ui/components/     # Shared Compose components (4 files)
+│               │   ├── settings/          # Settings bottom sheet
+│               │   └── placeholder/       # Placeholder tabs
+│               ├── res/layout/            # 5 layout XMLs (onboarding, server management screens)
 │               ├── res/values/            # colors.xml, strings.xml, themes.xml
 │               ├── res/drawable/          # Icons, rounded card shape
 │               ├── res/anim/              # Fade in/out (300ms)

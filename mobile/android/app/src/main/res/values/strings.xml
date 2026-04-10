@@ -44,6 +44,52 @@
     <string name="check_vpn">Check VPN Settings</string>
     <string name="switch_server">Switch Server</string>
 
+    <!-- Chat -->
+    <string name="message_placeholder">Message Gizmo\u2026</string>
+    <string name="new_chat">New Chat</string>
+    <string name="search_conversations">Search conversations\u2026</string>
+    <string name="thinking_indicator">Gizmo is thinking\u2026</string>
+    <string name="powered_by">Powered by Qwen3.5 9B</string>
+    <string name="fully_local">100%% local</string>
+    <string name="stop">Stop</string>
+
+    <!-- Tabs -->
+    <string name="tab_chat">Chat</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_code">Code</string>
+    <string name="tab_stats">Stats</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="thinking_mode">Thinking mode</string>
+    <string name="context_length">Context length</string>
+    <string name="behavioral_mode">Mode</string>
+    <string name="service_health">Service health</string>
+    <string name="server_info">Server info</string>
+    <string name="think">Think</string>
+
+    <!-- Suggestions -->
+    <string name="vision">Vision</string>
+    <string name="search">Search</string>
+    <string name="reason">Reason</string>
+    <string name="code">Code</string>
+    <string name="files">Files</string>
+    <string name="audio">Audio</string>
+    <string name="suggestion_vision">Analyze an image or screenshot</string>
+    <string name="suggestion_search">Search the web for the latest news</string>
+    <string name="suggestion_reason">Solve a complex problem step by step</string>
+    <string name="suggestion_code">Write or debug code</string>
+    <string name="suggestion_files">Summarize or analyze a document</string>
+    <string name="suggestion_audio">Transcribe or analyze audio</string>
+
+    <!-- Misc -->
+    <string name="coming_soon">Coming in a future update</string>
+    <string name="conversation_deleted">Conversation deleted</string>
+    <string name="undo">Undo</string>
+    <string name="rename">Rename</string>
+    <string name="image_label">Image</string>
+    <string name="document_label">Document</string>
+
     <!-- General -->
     <string name="exit_title">Exit Gizmo?</string>
     <string name="exit">Exit</string>

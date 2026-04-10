@@ -164,7 +164,7 @@ The Dockerfile copies the build output at image build time. Just running `up -d`
 
 ## Building the Android APK
 
-The Android app lives in `mobile/android/`. It's a Kotlin WebView wrapper — no server-side changes.
+The Android app lives in `mobile/android/`. It's a native Jetpack Compose chat app that communicates with the orchestrator via WebSocket and REST API.
 
 ### Containerized Build (Recommended)
 
@@ -194,11 +194,27 @@ The `gizmo-defaults.json` file is gitignored — it's for personal builds only. 
 
 | Directory | Purpose |
 |-----------|---------|
-| `mobile/android/app/src/main/kotlin/ai/gizmo/app/` | Kotlin source (11 files) |
-| `mobile/android/app/src/main/res/` | Layouts, colors, themes, drawables, animations |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/` | Activities + server management (10 files) |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/model/` | Data classes, ViewModel, ServerEvent sealed class |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/network/` | OkHttp WebSocket + REST client |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/chat/` | Compose chat screens (ChatScreen, MessageList, ChatInput, etc.) |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/ui/` | Material3 theme + shared Compose components |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/settings/` | Settings bottom sheet |
+| `mobile/android/app/src/main/kotlin/ai/gizmo/app/placeholder/` | Placeholder screens for future tabs |
+| `mobile/android/app/src/main/res/` | Layouts (XML activities), colors, themes, drawables, animations |
 | `mobile/android/app/src/main/AndroidManifest.xml` | Permissions, activities, config |
 | `mobile/Dockerfile` | Build environment (JDK 17 + Android SDK) |
 | `mobile/build-apk.sh` | One-command Podman build script |
+
+### Dependencies
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| Jetpack Compose BOM | 2025.05.00 | UI toolkit (Material3) |
+| OkHttp | 5.0.0-alpha.14 | HTTP client + WebSocket |
+| multiplatform-markdown-renderer | 0.28.0 | Native markdown rendering + syntax highlighting |
+| Coil | 3.1.0 | Image loading and caching |
+| AndroidX | various | Core, Splash, AppCompat, Lifecycle, Material (for XML activities) |
 
 ## Future Features
 

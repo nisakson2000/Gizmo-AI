@@ -205,10 +205,13 @@ bash scripts/start.sh            # Starts all 6 services
 <details>
 <summary><strong>Android App</strong></summary>
 
-- **Native WebView wrapper** — tap the icon, you're in. No browser required
+- **Native Compose chat** — streaming responses, markdown rendering, syntax highlighting
 - **Multi-server profiles** — connect to LAN, Tailscale, or any Gizmo instance
-- **One-tap onboarding** — connection test, HTTPS awareness, VPN setup guidance
-- **Full feature support** — file uploads, mic recording, TTS playback, downloads
+- **Thinking mode** — collapsible reasoning blocks, tool call status cards
+- **Vision + documents** — attach images and files for analysis
+- **Conversation management** — search, rename, delete with undo
+- **Mode selector** — Chat, Brainstorm, Coder, Research, and custom modes
+- **Auto-reconnect** — exponential backoff on network interruption
 - **Build from source** — containerized Podman build, no Android Studio needed
 - **CI releases** — GitHub Actions builds APK on version tags
 
