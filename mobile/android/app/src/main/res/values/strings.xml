@@ -75,16 +75,24 @@
     <string name="code">Code</string>
     <string name="files">Files</string>
     <string name="audio">Audio</string>
-    <string name="suggestion_vision">Analyze an image or screenshot</string>
-    <string name="suggestion_search">Search the web for the latest news</string>
-    <string name="suggestion_reason">Solve a complex problem step by step</string>
-    <string name="suggestion_code">Write or debug code</string>
-    <string name="suggestion_files">Summarize or analyze a document</string>
+    <string name="suggestion_vision">Describe what you see in the image I upload</string>
+    <string name="suggestion_search">Search the web for the latest news today</string>
+    <string name="suggestion_reason">Think step by step: if a train travels 60 mph for 2.5 hours, how far does it go?</string>
+    <string name="suggestion_code">Write code that </string>
+    <string name="suggestion_files">Summarize the document I upload</string>
     <string name="suggestion_audio">Transcribe or analyze audio</string>
     <string name="video">Video</string>
-    <string name="suggestion_video">Analyze a video clip</string>
+    <string name="suggestion_video">Describe what happens in this video</string>
     <string name="voice_studio">Voice Studio</string>
     <string name="suggestion_voice_studio">Clone or customize a voice</string>
+    <string name="desc_vision">Analyze images, screenshots, diagrams</string>
+    <string name="desc_video">Upload videos for frame-by-frame analysis</string>
+    <string name="desc_audio">Transcribe &amp; analyze audio files</string>
+    <string name="desc_search">Real-time web search via SearXNG</string>
+    <string name="desc_reason">Extended thinking for complex problems</string>
+    <string name="desc_code">Ask Gizmo to write and run code</string>
+    <string name="desc_voice_studio">Clone voices &amp; text-to-speech</string>
+    <string name="desc_files">Upload PDFs, code, text for analysis</string>
 
     <!-- Misc -->
     <string name="coming_soon">Coming in a future update</string>

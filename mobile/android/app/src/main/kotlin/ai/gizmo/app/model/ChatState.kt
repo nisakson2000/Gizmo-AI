@@ -253,6 +253,7 @@ class ChatViewModel(
                 is ServerEvent.Done -> {
                     activeConversationId.value = event.conversationId
                     finalizeAssistantMessage()
+                    connectionState.value = ConnectionState.CONNECTED
                     loadConversations()
                 }
                 is ServerEvent.Error -> {
@@ -262,6 +263,7 @@ class ChatViewModel(
                         traceId = event.traceId ?: ""
                     ))
                     generating.value = false
+                    connectionState.value = ConnectionState.CONNECTED
                 }
                 is ServerEvent.Unknown -> { /* Ignore unrecognized event types */ }
             }

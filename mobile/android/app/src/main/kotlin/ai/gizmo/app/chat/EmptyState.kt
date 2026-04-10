@@ -1,5 +1,6 @@
 package ai.gizmo.app.chat
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,23 +45,27 @@ import ai.gizmo.app.ui.theme.TextSecondary
 
 data class Suggestion(
     val labelRes: Int,
+    val descRes: Int,
     val promptRes: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val special: String? = null
 )
 
 private val suggestions = listOf(
-    Suggestion(R.string.vision, R.string.suggestion_vision, Icons.Default.Visibility),
-    Suggestion(R.string.video, R.string.suggestion_video, Icons.Default.VideoFile),
-    Suggestion(R.string.audio, R.string.suggestion_audio, Icons.Default.AudioFile),
-    Suggestion(R.string.search, R.string.suggestion_search, Icons.Default.Search),
-    Suggestion(R.string.reason, R.string.suggestion_reason, Icons.Default.Psychology),
-    Suggestion(R.string.code, R.string.suggestion_code, Icons.Default.Code),
-    Suggestion(R.string.voice_studio, R.string.suggestion_voice_studio, Icons.Default.RecordVoiceOver),
-    Suggestion(R.string.files, R.string.suggestion_files, Icons.Default.Description)
+    Suggestion(R.string.vision, R.string.desc_vision, R.string.suggestion_vision, Icons.Default.Visibility),
+    Suggestion(R.string.video, R.string.desc_video, R.string.suggestion_video, Icons.Default.VideoFile),
+    Suggestion(R.string.audio, R.string.desc_audio, R.string.suggestion_audio, Icons.Default.AudioFile, special = "audio"),
+    Suggestion(R.string.search, R.string.desc_search, R.string.suggestion_search, Icons.Default.Search),
+    Suggestion(R.string.reason, R.string.desc_reason, R.string.suggestion_reason, Icons.Default.Psychology),
+    Suggestion(R.string.code, R.string.desc_code, R.string.suggestion_code, Icons.Default.Code),
+    Suggestion(R.string.voice_studio, R.string.desc_voice_studio, R.string.suggestion_voice_studio, Icons.Default.RecordVoiceOver, special = "voice_studio"),
+    Suggestion(R.string.files, R.string.desc_files, R.string.suggestion_files, Icons.Default.Description)
 )
 
 @Composable
 fun EmptyState(onSuggestionClick: (String) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -97,7 +103,13 @@ fun EmptyState(onSuggestionClick: (String) -> Unit, modifier: Modifier = Modifie
             items(suggestions) { suggestion ->
                 SuggestionCard(
                     suggestion = suggestion,
-                    onClick = { onSuggestionClick(it) }
+                    onClick = { prompt ->
+                        if (suggestion.special != null) {
+                            Toast.makeText(context, context.getString(R.string.coming_soon), Toast.LENGTH_SHORT).show()
+                        } else {
+                            onSuggestionClick(prompt)
+                        }
+                    }
                 )
             }
         }
@@ -127,7 +139,16 @@ private fun SuggestionCard(suggestion: Suggestion, onClick: (String) -> Unit) {
                 text = stringResource(suggestion.labelRes),
                 color = TextPrimary,
                 fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(suggestion.descRes),
+                color = TextDim,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 14.sp
             )
         }
     }
