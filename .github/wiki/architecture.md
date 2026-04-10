@@ -1,7 +1,6 @@
 # Architecture
 
 > **Audience:** Developers and system administrators. Assumes familiarity with containers and REST APIs.
-<!-- wiki sync test -->
 
 ---
 
