@@ -52,6 +52,8 @@ import ai.gizmo.app.ui.components.ConnectionIndicator
 import ai.gizmo.app.ui.theme.BgPrimary
 import ai.gizmo.app.ui.theme.TextDim
 import ai.gizmo.app.ui.theme.TextPrimary
+import ai.gizmo.app.memory.MemoryManagerScreen
+import ai.gizmo.app.mode.ModeEditorScreen
 import ai.gizmo.app.voice.VoiceStudioScreen
 import ai.gizmo.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
@@ -69,13 +71,15 @@ fun ChatScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
     var showVoiceStudio by remember { mutableStateOf(false) }
+    var showModeEditor by remember { mutableStateOf(false) }
+    var showMemoryManager by remember { mutableStateOf(false) }
     var inputText by remember { mutableStateOf("") }
     var editText by remember { mutableStateOf("") }
     val voices = remember { mutableStateListOf<Voice>() }
 
-    // Load TTS settings
+    // Load persisted settings
     LaunchedEffect(Unit) {
-        viewModel.loadTtsSettings(context)
+        viewModel.loadSettings(context)
         voices.addAll(viewModel.api.getVoices())
     }
 
@@ -280,27 +284,29 @@ fun ChatScreen(
     if (showSettings) {
         SettingsScreen(
             thinkingEnabled = viewModel.thinkingEnabled.value,
-            onThinkingChanged = { viewModel.thinkingEnabled.value = it },
+            onThinkingChanged = { viewModel.thinkingEnabled.value = it; viewModel.saveSettings(context) },
             contextLength = viewModel.contextLength.value,
             onContextLengthChanged = { viewModel.contextLength.value = it },
             modes = viewModel.modes,
             selectedMode = viewModel.selectedMode.value,
-            onModeSelected = { viewModel.selectedMode.value = it },
+            onModeSelected = { viewModel.selectedMode.value = it; viewModel.saveSettings(context) },
             serviceHealth = viewModel.serviceHealth,
             serverName = viewModel.serverName,
             serverUrl = viewModel.serverUrl,
             onRefreshHealth = { viewModel.loadServiceHealth() },
             onSwitchServer = onSwitchServer,
             onOpenVoiceStudio = { showSettings = false; showVoiceStudio = true },
+            onOpenModeEditor = { showSettings = false; showModeEditor = true },
+            onOpenMemoryManager = { showSettings = false; showMemoryManager = true },
             ttsEnabled = viewModel.ttsEnabled.value,
-            onTtsChanged = { viewModel.ttsEnabled.value = it; viewModel.saveTtsSettings(context) },
+            onTtsChanged = { viewModel.ttsEnabled.value = it; viewModel.saveSettings(context) },
             ttsSpeed = viewModel.ttsSpeed.value,
-            onTtsSpeedChanged = { viewModel.ttsSpeed.value = it; viewModel.saveTtsSettings(context) },
+            onTtsSpeedChanged = { viewModel.ttsSpeed.value = it; viewModel.saveSettings(context) },
             ttsLanguage = viewModel.ttsLanguage.value,
-            onTtsLanguageChanged = { viewModel.ttsLanguage.value = it; viewModel.saveTtsSettings(context) },
+            onTtsLanguageChanged = { viewModel.ttsLanguage.value = it; viewModel.saveSettings(context) },
             voices = voices,
             selectedVoiceId = viewModel.ttsVoiceId.value,
-            onVoiceSelected = { viewModel.ttsVoiceId.value = it; viewModel.saveTtsSettings(context) },
+            onVoiceSelected = { viewModel.ttsVoiceId.value = it; viewModel.saveSettings(context) },
             onDismiss = { showSettings = false }
         )
     }
@@ -309,8 +315,23 @@ fun ChatScreen(
         VoiceStudioScreen(
             api = viewModel.api,
             selectedVoiceId = viewModel.ttsVoiceId.value,
-            onSelectVoice = { viewModel.ttsVoiceId.value = it; viewModel.saveTtsSettings(context) },
+            onSelectVoice = { viewModel.ttsVoiceId.value = it; viewModel.saveSettings(context) },
             onDismiss = { showVoiceStudio = false; scope.launch { voices.clear(); voices.addAll(viewModel.api.getVoices()) } }
+        )
+    }
+
+    if (showModeEditor) {
+        ModeEditorScreen(
+            api = viewModel.api,
+            onModesChanged = { viewModel.loadModes() },
+            onDismiss = { showModeEditor = false }
+        )
+    }
+
+    if (showMemoryManager) {
+        MemoryManagerScreen(
+            api = viewModel.api,
+            onDismiss = { showMemoryManager = false }
         )
     }
 }

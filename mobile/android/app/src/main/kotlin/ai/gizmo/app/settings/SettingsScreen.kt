@@ -75,6 +75,8 @@ fun SettingsScreen(
     onRefreshHealth: () -> Unit,
     onSwitchServer: () -> Unit,
     onOpenVoiceStudio: () -> Unit,
+    onOpenModeEditor: () -> Unit,
+    onOpenMemoryManager: () -> Unit,
     ttsEnabled: Boolean,
     onTtsChanged: (Boolean) -> Unit,
     ttsSpeed: Float,
@@ -202,6 +204,16 @@ fun SettingsScreen(
                         Icon(Icons.Default.Check, contentDescription = null, tint = Accent, modifier = Modifier.size(20.dp))
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Border)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Mode & Memory tools
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onOpenModeEditor) { Text("Mode Editor", color = Accent) }
+                TextButton(onClick = onOpenMemoryManager) { Text("Memory Manager", color = Accent) }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

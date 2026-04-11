@@ -302,10 +302,15 @@ fun ChatInput(
                     modes.forEach { mode ->
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    mode.label,
-                                    color = if (mode.name == selectedMode) Accent else TextPrimary
-                                )
+                                Column {
+                                    Text(
+                                        mode.label,
+                                        color = if (mode.name == selectedMode) Accent else TextPrimary
+                                    )
+                                    if (mode.description.isNotEmpty()) {
+                                        Text(mode.description, fontSize = 12.sp, color = TextDim)
+                                    }
+                                }
                             },
                             onClick = {
                                 onModeSelected(mode.name)

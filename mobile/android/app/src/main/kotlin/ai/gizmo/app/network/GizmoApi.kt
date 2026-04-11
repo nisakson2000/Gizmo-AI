@@ -390,6 +390,134 @@ class GizmoApi(private val serverUrl: String) {
         }
     }
 
+    // Mode Editor endpoints
+    suspend fun getModeDetail(name: String): ai.gizmo.app.model.ModeDetail? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$baseUrl/api/modes/$name").build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext null
+            val body = response.body?.string() ?: return@withContext null
+            val obj = JSONObject(body)
+            ai.gizmo.app.model.ModeDetail(
+                name = obj.getString("name"),
+                label = obj.optString("label", ""),
+                description = obj.optString("description", ""),
+                icon = obj.optString("icon", ""),
+                order = obj.optInt("order", 0),
+                systemPrompt = obj.optString("system_prompt", "")
+            )
+        } catch (_: Exception) { null }
+    }
+
+    suspend fun createMode(name: String, label: String, description: String, systemPrompt: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val json = JSONObject().apply {
+                    put("name", name)
+                    put("label", label)
+                    put("description", description)
+                    put("system_prompt", systemPrompt)
+                }.toString()
+                val request = Request.Builder()
+                    .url("$baseUrl/api/modes")
+                    .post(json.toRequestBody("application/json".toMediaType()))
+                    .build()
+                client.newCall(request).execute().isSuccessful
+            } catch (_: Exception) { false }
+        }
+
+    suspend fun updateMode(name: String, label: String?, description: String?, systemPrompt: String?): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val json = JSONObject().apply {
+                    if (label != null) put("label", label)
+                    if (description != null) put("description", description)
+                    if (systemPrompt != null) put("system_prompt", systemPrompt)
+                }.toString()
+                val request = Request.Builder()
+                    .url("$baseUrl/api/modes/$name")
+                    .put(json.toRequestBody("application/json".toMediaType()))
+                    .build()
+                client.newCall(request).execute().isSuccessful
+            } catch (_: Exception) { false }
+        }
+
+    suspend fun deleteMode(name: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$baseUrl/api/modes/$name").delete().build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) { false }
+    }
+
+    // Memory Manager endpoints
+    suspend fun getMemories(subdir: String? = null): List<ai.gizmo.app.model.MemoryFile> = withContext(Dispatchers.IO) {
+        try {
+            val url = if (subdir != null) "$baseUrl/api/memory/list?subdir=$subdir"
+                      else "$baseUrl/api/memory/list"
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext emptyList()
+            val body = response.body?.string() ?: return@withContext emptyList()
+            val arr = JSONArray(body)
+            (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                ai.gizmo.app.model.MemoryFile(
+                    filename = obj.getString("filename"),
+                    subdir = obj.optString("subdir", ""),
+                    size = obj.optLong("size", 0),
+                    modified = obj.optString("modified", "")
+                )
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun readMemory(filename: String, subdir: String): ai.gizmo.app.model.MemoryContent? = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/api/memory/read?filename=${Uri.encode(filename)}&subdir=${Uri.encode(subdir)}"
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext null
+            val body = response.body?.string() ?: return@withContext null
+            val obj = JSONObject(body)
+            ai.gizmo.app.model.MemoryContent(
+                filename = obj.optString("filename", filename),
+                subdir = obj.optString("subdir", subdir),
+                content = obj.optString("content", "")
+            )
+        } catch (_: Exception) { null }
+    }
+
+    suspend fun writeMemory(filename: String, content: String, subdir: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val body = okhttp3.FormBody.Builder()
+                .add("filename", filename)
+                .add("content", content)
+                .add("subdir", subdir)
+                .build()
+            val request = Request.Builder().url("$baseUrl/api/memory/write").post(body).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) { false }
+    }
+
+    suspend fun deleteMemory(subdir: String, filename: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/memory/${Uri.encode(subdir)}/${Uri.encode(filename)}")
+                .delete().build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) { false }
+    }
+
+    suspend fun clearMemories(): Int = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$baseUrl/api/memory/clear").delete().build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext 0
+            val body = response.body?.string() ?: return@withContext 0
+            JSONObject(body).optInt("deleted", 0)
+        } catch (_: Exception) { 0 }
+    }
+
     suspend fun getModes(): List<Mode> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$baseUrl/api/modes").build()
