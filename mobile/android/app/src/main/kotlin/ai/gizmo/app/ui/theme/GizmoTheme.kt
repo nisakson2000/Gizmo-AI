@@ -4,25 +4,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 
-// Dynamic color accessors — these read from ThemeManager.currentPalette
-val BgPrimary: Color get() = ThemeManager.currentPalette.value.bgPrimary
-val BgSecondary: Color get() = ThemeManager.currentPalette.value.bgSecondary
-val BgTertiary: Color get() = ThemeManager.currentPalette.value.bgTertiary
-val BgHover: Color get() = ThemeManager.currentPalette.value.bgHover
-val Border: Color get() = ThemeManager.currentPalette.value.border
-val Accent: Color get() = ThemeManager.currentPalette.value.accent
-val AccentDim: Color get() = ThemeManager.currentPalette.value.accentDim
-val TextPrimary: Color get() = ThemeManager.currentPalette.value.textPrimary
-val TextSecondary: Color get() = ThemeManager.currentPalette.value.textSecondary
-val TextDim: Color get() = ThemeManager.currentPalette.value.textDim
-val ThinkingBg: Color get() = ThemeManager.currentPalette.value.thinkingBg
-val ThinkingBorder: Color get() = ThemeManager.currentPalette.value.thinkingBorder
-val Success: Color get() = ThemeManager.currentPalette.value.success
-val ErrorColor: Color get() = ThemeManager.currentPalette.value.error
-val UserMsg: Color get() = ThemeManager.currentPalette.value.userMsg
+val LocalGizmoPalette = compositionLocalOf { DefaultPalette }
+
+// Compose-safe color accessors — read from CompositionLocal, tracked for recomposition
+val BgPrimary: Color @Composable get() = LocalGizmoPalette.current.bgPrimary
+val BgSecondary: Color @Composable get() = LocalGizmoPalette.current.bgSecondary
+val BgTertiary: Color @Composable get() = LocalGizmoPalette.current.bgTertiary
+val BgHover: Color @Composable get() = LocalGizmoPalette.current.bgHover
+val Border: Color @Composable get() = LocalGizmoPalette.current.border
+val Accent: Color @Composable get() = LocalGizmoPalette.current.accent
+val AccentDim: Color @Composable get() = LocalGizmoPalette.current.accentDim
+val TextPrimary: Color @Composable get() = LocalGizmoPalette.current.textPrimary
+val TextSecondary: Color @Composable get() = LocalGizmoPalette.current.textSecondary
+val TextDim: Color @Composable get() = LocalGizmoPalette.current.textDim
+val ThinkingBg: Color @Composable get() = LocalGizmoPalette.current.thinkingBg
+val ThinkingBorder: Color @Composable get() = LocalGizmoPalette.current.thinkingBorder
+val Success: Color @Composable get() = LocalGizmoPalette.current.success
+val ErrorColor: Color @Composable get() = LocalGizmoPalette.current.error
+val UserMsg: Color @Composable get() = LocalGizmoPalette.current.userMsg
 
 @Composable
 fun GizmoTheme(content: @Composable () -> Unit) {
@@ -52,5 +56,7 @@ fun GizmoTheme(content: @Composable () -> Unit) {
         )
     }
 
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    CompositionLocalProvider(LocalGizmoPalette provides palette) {
+        MaterialTheme(colorScheme = colorScheme, content = content)
+    }
 }

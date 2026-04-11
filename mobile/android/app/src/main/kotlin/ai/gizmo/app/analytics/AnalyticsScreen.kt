@@ -51,6 +51,7 @@ import ai.gizmo.app.ui.theme.Success
 import ai.gizmo.app.ui.theme.TextDim
 import ai.gizmo.app.ui.theme.TextPrimary
 import ai.gizmo.app.ui.theme.TextSecondary
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,9 +64,10 @@ fun AnalyticsScreen(api: GizmoApi, modifier: Modifier = Modifier) {
     var selectedDays by remember { mutableIntStateOf(30) }
 
     LaunchedEffect(Unit) {
-        summary = api.getAnalyticsSummary()
-        topConvos = api.getAnalyticsConversations()
-        modeUsage = api.getAnalyticsModes()
+        val s = scope.async { api.getAnalyticsSummary() }
+        val c = scope.async { api.getAnalyticsConversations() }
+        val m = scope.async { api.getAnalyticsModes() }
+        summary = s.await(); topConvos = c.await(); modeUsage = m.await()
     }
 
     LaunchedEffect(selectedDays) {

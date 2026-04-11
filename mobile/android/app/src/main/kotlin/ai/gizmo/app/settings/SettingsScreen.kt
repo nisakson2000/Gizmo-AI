@@ -397,7 +397,7 @@ private fun ThemeButton(key: String, label: String, swatchColor: androidx.compos
         shape = RoundedCornerShape(8.dp),
         color = if (isSelected) swatchColor.copy(alpha = 0.2f) else BgTertiary,
         border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, swatchColor) else null,
-        modifier = Modifier.width(56.dp).height(48.dp)
+        modifier = Modifier.height(48.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.padding(4.dp)) {
             Surface(shape = CircleShape, color = swatchColor, modifier = Modifier.size(16.dp)) {}

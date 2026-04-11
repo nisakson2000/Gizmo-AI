@@ -79,9 +79,8 @@ fun ChatScreen(
     var editText by remember { mutableStateOf("") }
     val voices = remember { mutableStateListOf<Voice>() }
 
-    // Load persisted settings + theme
+    // Load persisted settings
     LaunchedEffect(Unit) {
-        ai.gizmo.app.ui.theme.ThemeManager.loadTheme(context)
         viewModel.loadSettings(context)
         voices.addAll(viewModel.api.getVoices())
     }

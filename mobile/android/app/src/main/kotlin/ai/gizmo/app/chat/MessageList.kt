@@ -216,6 +216,7 @@ private fun InlineEditField(
 @Composable
 private fun ThinkingIndicator() {
     val transition = rememberInfiniteTransition(label = "thinking")
+    val dotColor = Accent
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,7 +233,7 @@ private fun ThinkingIndicator() {
             )
             Box(modifier = Modifier.size(6.dp).alpha(alpha)) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawCircle(color = ai.gizmo.app.ui.theme.Accent)
+                    drawCircle(color = dotColor)
                 }
             }
             if (index < 2) Spacer(modifier = Modifier.width(4.dp))

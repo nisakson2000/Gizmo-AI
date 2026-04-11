@@ -11,11 +11,13 @@ import ai.gizmo.app.chat.ChatScreen
 import ai.gizmo.app.model.ChatViewModel
 import ai.gizmo.app.model.ChatViewModelFactory
 import ai.gizmo.app.ui.theme.GizmoTheme
+import ai.gizmo.app.ui.theme.ThemeManager
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeManager.loadTheme(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
