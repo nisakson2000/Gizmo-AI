@@ -22,13 +22,35 @@
 	$effect(() => {
 		const s = $pendingSuggestion;
 		if (s) {
+			pendingSuggestion.set('');
 			if (s === '__audio_upload__') {
-				pendingSuggestion.set('');
 				openAudioPicker();
 				return;
 			}
+			if (s === '__upload_image__') {
+				openFilePicker('image/*');
+				return;
+			}
+			if (s === '__upload_video__') {
+				openFilePicker('video/*');
+				return;
+			}
+			if (s === '__upload_file__') {
+				openFilePicker('.pdf,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.csv,.html,.xml,.zip');
+				return;
+			}
+			if (s.startsWith('__enable_thinking__')) {
+				thinkingEnabled.set(true);
+				const stub = s.slice('__enable_thinking__'.length);
+				if (stub) input = stub;
+				if (textarea) {
+					textarea.focus();
+					textarea.style.height = 'auto';
+					textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+				}
+				return;
+			}
 			input = s;
-			pendingSuggestion.set('');
 			if (textarea) {
 				textarea.focus();
 				textarea.style.height = 'auto';
@@ -145,74 +167,79 @@
 		toast(msg, 'error');
 	}
 
-	function handleFileUpload() {
+	function openFilePicker(accept: string) {
 		const inp = document.createElement('input');
 		inp.type = 'file';
-		inp.accept = 'image/*,video/*,audio/*,.pdf,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.csv';
-		inp.onchange = async (e) => {
+		inp.accept = accept;
+		inp.onchange = (e) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
-			if (!file) return;
+			if (file) handleFileSelected(file);
+		};
+		inp.click();
+	}
 
-			const isImage = file.type.startsWith('image/');
-			const isVideo = file.type.startsWith('video/');
-			const isAudio = file.type.startsWith('audio/');
-			const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_DOC_SIZE;
-			if (file.size > maxSize) {
-				showError(`File too large. Max ${isVideo ? '500MB' : '50MB'}.`);
-				return;
-			}
+	async function handleFileSelected(file: File) {
+		const isImage = file.type.startsWith('image/');
+		const isVideo = file.type.startsWith('video/');
+		const isAudio = file.type.startsWith('audio/');
+		const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_DOC_SIZE;
+		if (file.size > maxSize) {
+			showError(`File too large. Max ${isVideo ? '500MB' : '50MB'}.`);
+			return;
+		}
 
-			const formData = new FormData();
-			formData.append('file', file);
+		const formData = new FormData();
+		formData.append('file', file);
 
-			if (isAudio) {
-				// Transcribe audio via Whisper, then stage transcript as a file
-				try {
-					uploading = true;
-					const resp = await fetchWithTimeout('/api/transcribe', { method: 'POST', body: formData });
-					uploading = false;
-					if (!resp.ok) {
-						showError('Audio transcription failed.');
-						return;
-					}
-					const data = await resp.json();
-					if (data.text) {
-						pendingFile = { filename: file.name, content: `[Transcribed audio from: ${file.name}]\n\n${data.text}` };
-					} else {
-						showError('No speech detected in audio.');
-					}
-				} catch {
-					uploading = false;
-					showError('Whisper service unavailable.');
-				}
-				return;
-			}
-
-			const endpoint = isVideo ? '/api/upload-video' : isImage ? '/api/upload-image' : '/api/upload';
-
+		if (isAudio) {
 			try {
 				uploading = true;
-				const resp = await fetchWithTimeout(endpoint, { method: 'POST', body: formData });
+				const resp = await fetchWithTimeout('/api/transcribe', { method: 'POST', body: formData });
 				uploading = false;
 				if (!resp.ok) {
-					const err = await resp.json().catch(() => null);
-					showError(err?.error || 'Upload failed. Server returned an error.');
+					showError('Audio transcription failed.');
 					return;
 				}
 				const data = await resp.json();
-				if (isVideo) {
-					pendingVideo = { filename: data.filename, frames: data.frames, duration: data.duration, video_url: data.video_url };
-				} else if (isImage) {
-					pendingImage = { filename: data.filename, data_url: data.data_url };
+				if (data.text) {
+					pendingFile = { filename: file.name, content: `[Transcribed audio from: ${file.name}]\n\n${data.text}` };
 				} else {
-					pendingFile = { filename: data.filename, content: data.content || '' };
+					showError('No speech detected in audio.');
 				}
 			} catch {
 				uploading = false;
-				showError('Upload failed. Check your connection.');
+				showError('Whisper service unavailable.');
 			}
-		};
-		inp.click();
+			return;
+		}
+
+		const endpoint = isVideo ? '/api/upload-video' : isImage ? '/api/upload-image' : '/api/upload';
+
+		try {
+			uploading = true;
+			const resp = await fetchWithTimeout(endpoint, { method: 'POST', body: formData });
+			uploading = false;
+			if (!resp.ok) {
+				const err = await resp.json().catch(() => null);
+				showError(err?.error || 'Upload failed. Server returned an error.');
+				return;
+			}
+			const data = await resp.json();
+			if (isVideo) {
+				pendingVideo = { filename: data.filename, frames: data.frames, duration: data.duration, video_url: data.video_url };
+			} else if (isImage) {
+				pendingImage = { filename: data.filename, data_url: data.data_url };
+			} else {
+				pendingFile = { filename: data.filename, content: data.content || '' };
+			}
+		} catch {
+			uploading = false;
+			showError('Upload failed. Check your connection.');
+		}
+	}
+
+	function handleFileUpload() {
+		openFilePicker('image/*,video/*,audio/*,.pdf,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.csv');
 	}
 
 	function openAudioPicker() {
