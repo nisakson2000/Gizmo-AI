@@ -613,12 +613,11 @@ class ChatViewModel(
     }
 
     fun saveSettings(context: android.content.Context) {
-        val prefs = GizmoPreferences(context)
-        prefs.ttsEnabled = ttsEnabled.value
-        prefs.ttsVoiceId = ttsVoiceId.value
-        prefs.ttsSpeed = ttsSpeed.value
-        prefs.ttsLanguage = ttsLanguage.value
-        prefs.selectedMode = selectedMode.value
+        GizmoPreferences(context).saveBatch(
+            ttsEnabled = ttsEnabled.value, ttsVoiceId = ttsVoiceId.value,
+            ttsSpeed = ttsSpeed.value, ttsLanguage = ttsLanguage.value,
+            selectedMode = selectedMode.value
+        )
     }
 
     override fun onCleared() {

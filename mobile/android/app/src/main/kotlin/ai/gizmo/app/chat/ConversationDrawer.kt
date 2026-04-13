@@ -125,7 +125,7 @@ fun ConversationDrawer(
 
             // Conversation list
             val displayList = if (isSearching) searchResults else conversations
-            val grouped = groupByDate(displayList)
+            val grouped = remember(displayList.toList()) { groupByDate(displayList) }
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 grouped.forEach { (label, convos) ->

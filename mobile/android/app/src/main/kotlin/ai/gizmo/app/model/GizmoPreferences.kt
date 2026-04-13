@@ -39,6 +39,19 @@ class GizmoPreferences(context: Context) {
         ttsEnabled = ttsEnabled, ttsVoiceId = ttsVoiceId, ttsSpeed = ttsSpeed,
         ttsLanguage = ttsLanguage, selectedMode = selectedMode, appTheme = appTheme
     )
+
+    fun saveBatch(
+        ttsEnabled: Boolean, ttsVoiceId: String?, ttsSpeed: Float,
+        ttsLanguage: String, selectedMode: String
+    ) {
+        prefs.edit()
+            .putBoolean("tts_enabled", ttsEnabled)
+            .putString("tts_voice_id", ttsVoiceId)
+            .putFloat("tts_speed", ttsSpeed)
+            .putString("tts_language", ttsLanguage)
+            .putString("selected_mode", selectedMode)
+            .apply()
+    }
 }
 
 data class SettingsSnapshot(

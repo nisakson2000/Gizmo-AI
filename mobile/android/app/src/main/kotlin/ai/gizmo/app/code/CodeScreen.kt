@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -100,7 +101,7 @@ fun CodeScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifier) 
     }
 
     if (showChat) {
-        androidx.activity.compose.BackHandler { showChat = false }
+        BackHandler { showChat = false }
         CodeChat(serverUrl = serverUrl, code = code, language = language, onDismiss = { showChat = false })
         return
     }
