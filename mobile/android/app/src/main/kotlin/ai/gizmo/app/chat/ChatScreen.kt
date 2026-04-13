@@ -241,6 +241,8 @@ fun ChatScreen(
                                     onPickAudio = { audioPickerLauncher.launch("audio/*") },
                                     onPickDocument = { docPickerLauncher.launch("*/*") }
                                 ),
+                                onEnableThinking = { viewModel.thinkingEnabled.value = true },
+                                onOpenVoiceStudio = { showVoiceStudio = true },
                                 modifier = Modifier.weight(1f)
                             )
                         }

@@ -77,7 +77,7 @@
     <string name="audio">Audio</string>
     <string name="suggestion_vision">Describe what you see in the image I upload</string>
     <string name="suggestion_search">Search the web for the latest news today</string>
-    <string name="suggestion_reason">Think step by step: if a train travels 60 mph for 2.5 hours, how far does it go?</string>
+    <string name="suggestion_reason">Think step by step: </string>
     <string name="suggestion_code">Write code that </string>
     <string name="suggestion_files">Summarize the document I upload</string>
     <string name="suggestion_audio">Transcribe or analyze audio</string>

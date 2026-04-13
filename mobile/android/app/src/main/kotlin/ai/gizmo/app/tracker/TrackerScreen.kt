@@ -170,11 +170,10 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
                         }
                         items(filtered, key = { it.id }) { task ->
                             TaskItem(task = task, onClick = { selectedTaskId = task.id }, onDelete = {
-                                val deleted = task
                                 tasks.removeAll { it.id == task.id }
                                 scope.launch {
-                                    val result = snackbar.showSnackbar("Task deleted", "Undo", duration = SnackbarDuration.Short)
-                                    if (result == SnackbarResult.Dismissed) api.deleteTask(deleted.id) else loadTasks()
+                                    api.deleteTask(task.id)
+                                    snackbar.showSnackbar("Task deleted", duration = SnackbarDuration.Short)
                                 }
                             })
                         }
@@ -223,8 +222,8 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
                             NoteItem(note = note, onClick = { selectedNoteId = note.id }, onDelete = {
                                 notes.removeAll { it.id == note.id }
                                 scope.launch {
-                                    val result = snackbar.showSnackbar("Note deleted", "Undo", duration = SnackbarDuration.Short)
-                                    if (result == SnackbarResult.Dismissed) api.deleteNote(note.id) else loadNotes()
+                                    api.deleteNote(note.id)
+                                    snackbar.showSnackbar("Note deleted", duration = SnackbarDuration.Short)
                                 }
                             })
                         }
