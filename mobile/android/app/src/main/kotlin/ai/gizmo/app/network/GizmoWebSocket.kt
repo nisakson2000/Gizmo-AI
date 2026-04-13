@@ -12,6 +12,9 @@ import okio.ByteString
 import org.json.JSONObject
 import kotlin.math.min
 
+private const val RECONNECT_INITIAL_MS = 1000L
+private const val RECONNECT_MAX_MS = 30000L
+
 class GizmoWebSocket(
     private val serverUrl: String,
     private val wsPath: String = "/ws/chat",
@@ -20,7 +23,7 @@ class GizmoWebSocket(
     private val onStateChange: (ConnectionState) -> Unit
 ) {
     private var webSocket: WebSocket? = null
-    private var reconnectDelay = 1000L
+    private var reconnectDelay = RECONNECT_INITIAL_MS
     private var shouldReconnect = true
     private val handler = Handler(Looper.getMainLooper())
 
@@ -37,7 +40,7 @@ class GizmoWebSocket(
 
         webSocket = GizmoApi.client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(ws: WebSocket, response: Response) {
-                reconnectDelay = 1000L
+                reconnectDelay = RECONNECT_INITIAL_MS
                 onStateChange(ConnectionState.CONNECTED)
             }
 
@@ -129,6 +132,6 @@ class GizmoWebSocket(
                 connect()
             }
         }, reconnectDelay)
-        reconnectDelay = min(reconnectDelay * 2, 30000L)
+        reconnectDelay = min(reconnectDelay * 2, RECONNECT_MAX_MS)
     }
 }

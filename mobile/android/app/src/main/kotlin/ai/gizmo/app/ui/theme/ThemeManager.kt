@@ -6,6 +6,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import ai.gizmo.app.R
+import ai.gizmo.app.model.GizmoPreferences
 
 object ThemeManager {
     val currentThemeKey = mutableStateOf("default")
@@ -24,15 +25,14 @@ object ThemeManager {
         val theme = ALL_THEMES.find { it.key == key } ?: return
         currentThemeKey.value = key
         currentPalette.value = theme.palette
-        context?.let {
-            it.getSharedPreferences("gizmo_settings", Context.MODE_PRIVATE)
-                .edit().putString("app_theme", key).apply()
-        }
+        context?.let { GizmoPreferences(it).appTheme = key }
     }
 
     fun loadTheme(context: Context) {
-        val prefs = context.getSharedPreferences("gizmo_settings", Context.MODE_PRIVATE)
-        val key = prefs.getString("app_theme", "default") ?: "default"
-        setTheme(key)
+        val key = GizmoPreferences(context).appTheme
+        // Bypass the equality check since this is initial load
+        val theme = ALL_THEMES.find { it.key == key } ?: return
+        currentThemeKey.value = key
+        currentPalette.value = theme.palette
     }
 }

@@ -602,34 +602,24 @@ class ChatViewModel(
         }
     }
 
-    // TTS settings persistence
     fun loadSettings(context: android.content.Context) {
-        val prefs = context.getSharedPreferences("gizmo_settings", android.content.Context.MODE_PRIVATE)
-        ttsEnabled.value = prefs.getBoolean("tts_enabled", false)
-        ttsVoiceId.value = prefs.getString("tts_voice_id", null)
-        ttsSpeed.value = prefs.getFloat("tts_speed", 1.0f)
-        ttsLanguage.value = prefs.getString("tts_language", "Auto") ?: "Auto"
-        selectedMode.value = prefs.getString("selected_mode", "chat") ?: "chat"
-        // Thinking mode always starts disabled — user must enable it per session
-        thinkingEnabled.value = false
+        val prefs = GizmoPreferences(context)
+        ttsEnabled.value = prefs.ttsEnabled
+        ttsVoiceId.value = prefs.ttsVoiceId
+        ttsSpeed.value = prefs.ttsSpeed
+        ttsLanguage.value = prefs.ttsLanguage
+        selectedMode.value = prefs.selectedMode
+        thinkingEnabled.value = false // Always starts disabled per session
     }
 
     fun saveSettings(context: android.content.Context) {
-        val prefs = context.getSharedPreferences("gizmo_settings", android.content.Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("tts_enabled", ttsEnabled.value)
-            .putString("tts_voice_id", ttsVoiceId.value)
-            .putFloat("tts_speed", ttsSpeed.value)
-            .putString("tts_language", ttsLanguage.value)
-            .putString("selected_mode", selectedMode.value)
-            .putBoolean("thinking_enabled", thinkingEnabled.value)
-            .apply()
+        val prefs = GizmoPreferences(context)
+        prefs.ttsEnabled = ttsEnabled.value
+        prefs.ttsVoiceId = ttsVoiceId.value
+        prefs.ttsSpeed = ttsSpeed.value
+        prefs.ttsLanguage = ttsLanguage.value
+        prefs.selectedMode = selectedMode.value
     }
-
-    @Deprecated("Use loadSettings instead", ReplaceWith("loadSettings(context)"))
-    fun loadTtsSettings(context: android.content.Context) = loadSettings(context)
-    @Deprecated("Use saveSettings instead", ReplaceWith("saveSettings(context)"))
-    fun saveTtsSettings(context: android.content.Context) = saveSettings(context)
 
     override fun onCleared() {
         super.onCleared()
