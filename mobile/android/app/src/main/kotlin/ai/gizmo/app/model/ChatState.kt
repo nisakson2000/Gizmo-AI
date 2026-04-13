@@ -610,7 +610,8 @@ class ChatViewModel(
         ttsSpeed.value = prefs.getFloat("tts_speed", 1.0f)
         ttsLanguage.value = prefs.getString("tts_language", "Auto") ?: "Auto"
         selectedMode.value = prefs.getString("selected_mode", "chat") ?: "chat"
-        thinkingEnabled.value = prefs.getBoolean("thinking_enabled", false)
+        // Thinking mode always starts disabled — user must enable it per session
+        thinkingEnabled.value = false
     }
 
     fun saveSettings(context: android.content.Context) {

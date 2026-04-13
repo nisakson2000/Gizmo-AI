@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -104,16 +106,19 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
         if (selectedTab == 0) loadTasks() else loadNotes()
     }
 
-    // Detail screens
+    // Detail screens with system back button support
     selectedTaskId?.let { id ->
+        BackHandler { selectedTaskId = null; loadTasks() }
         TaskDetail(api = api, taskId = id, onDismiss = { selectedTaskId = null; loadTasks() })
         return
     }
     selectedNoteId?.let { id ->
+        BackHandler { selectedNoteId = null; loadNotes() }
         NoteEditor(api = api, noteId = id, onDismiss = { selectedNoteId = null; loadNotes() })
         return
     }
     if (showChat) {
+        BackHandler { showChat = false }
         TrackerChat(serverUrl = serverUrl, onRefresh = { loadTasks(); loadNotes() }, onDismiss = { showChat = false })
         return
     }
@@ -128,7 +133,7 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
         containerColor = BgPrimary,
         modifier = modifier
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = BgSecondary,

@@ -5,16 +5,30 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import ai.gizmo.app.chat.ChatScreen
 import ai.gizmo.app.model.ChatViewModel
 import ai.gizmo.app.model.ChatViewModelFactory
+import ai.gizmo.app.ui.theme.Accent
+import ai.gizmo.app.ui.theme.BgPrimary
 import ai.gizmo.app.ui.theme.GizmoTheme
 import ai.gizmo.app.ui.theme.ThemeManager
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+
+    private var isLoading by mutableStateOf(true)
+    private var chatViewModel: ChatViewModel? = null
+    private var switchServerCallback: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.loadTheme(this)
@@ -42,25 +56,33 @@ class MainActivity : AppCompatActivity() {
         val finalId = serverId
         val finalName = serverName
 
+        switchServerCallback = {
+            startActivity(Intent(this, ServerListActivity::class.java))
+            finish()
+        }
+
+        // Show UI immediately — loading indicator first, then chat when ready
+        setContent {
+            GizmoTheme {
+                val vm = chatViewModel
+                if (isLoading || vm == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Accent)
+                    }
+                } else {
+                    ChatScreen(viewModel = vm, onSwitchServer = { switchServerCallback?.invoke() })
+                }
+            }
+        }
+
         lifecycleScope.launch {
             val healthy = checkServerHealth(finalUrl)
             if (healthy) {
-                val viewModel = ViewModelProvider(
+                chatViewModel = ViewModelProvider(
                     this@MainActivity,
                     ChatViewModelFactory(finalUrl, finalId, finalName)
                 )[ChatViewModel::class.java]
-
-                setContent {
-                    GizmoTheme {
-                        ChatScreen(
-                            viewModel = viewModel,
-                            onSwitchServer = {
-                                startActivity(Intent(this@MainActivity, ServerListActivity::class.java))
-                                finish()
-                            }
-                        )
-                    }
-                }
+                isLoading = false
             } else {
                 startActivity(Intent(this@MainActivity, ErrorActivity::class.java).apply {
                     putExtra(Server.EXTRA_ID, finalId)

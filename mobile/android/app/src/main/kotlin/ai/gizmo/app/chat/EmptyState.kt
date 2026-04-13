@@ -52,20 +52,23 @@ data class Suggestion(
 )
 
 private val suggestions = listOf(
-    Suggestion(R.string.vision, R.string.desc_vision, R.string.suggestion_vision, Icons.Default.Visibility),
-    Suggestion(R.string.video, R.string.desc_video, R.string.suggestion_video, Icons.Default.VideoFile),
+    Suggestion(R.string.vision, R.string.desc_vision, R.string.suggestion_vision, Icons.Default.Visibility, special = "image"),
+    Suggestion(R.string.video, R.string.desc_video, R.string.suggestion_video, Icons.Default.VideoFile, special = "video"),
     Suggestion(R.string.audio, R.string.desc_audio, R.string.suggestion_audio, Icons.Default.AudioFile, special = "audio"),
     Suggestion(R.string.search, R.string.desc_search, R.string.suggestion_search, Icons.Default.Search),
     Suggestion(R.string.reason, R.string.desc_reason, R.string.suggestion_reason, Icons.Default.Psychology),
     Suggestion(R.string.code, R.string.desc_code, R.string.suggestion_code, Icons.Default.Code),
     Suggestion(R.string.voice_studio, R.string.desc_voice_studio, R.string.suggestion_voice_studio, Icons.Default.RecordVoiceOver, special = "voice_studio"),
-    Suggestion(R.string.files, R.string.desc_files, R.string.suggestion_files, Icons.Default.Description)
+    Suggestion(R.string.files, R.string.desc_files, R.string.suggestion_files, Icons.Default.Description, special = "document")
 )
 
 @Composable
 fun EmptyState(
     onSuggestionClick: (String) -> Unit,
+    onPickImage: (() -> Unit)? = null,
+    onPickVideo: (() -> Unit)? = null,
     onPickAudio: (() -> Unit)? = null,
+    onPickDocument: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -109,9 +112,10 @@ fun EmptyState(
                     suggestion = suggestion,
                     onClick = { prompt ->
                         when (suggestion.special) {
-                            "audio" -> if (onPickAudio != null) onPickAudio() else {
-                                Toast.makeText(context, context.getString(R.string.coming_soon), Toast.LENGTH_SHORT).show()
-                            }
+                            "image" -> onPickImage?.invoke() ?: onSuggestionClick(prompt)
+                            "video" -> onPickVideo?.invoke() ?: onSuggestionClick(prompt)
+                            "audio" -> onPickAudio?.invoke() ?: onSuggestionClick(prompt)
+                            "document" -> onPickDocument?.invoke() ?: onSuggestionClick(prompt)
                             "voice_studio" -> Toast.makeText(context, context.getString(R.string.coming_soon), Toast.LENGTH_SHORT).show()
                             else -> onSuggestionClick(prompt)
                         }

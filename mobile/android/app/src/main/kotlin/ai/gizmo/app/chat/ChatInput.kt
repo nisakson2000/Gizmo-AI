@@ -210,7 +210,10 @@ fun ChatInput(
                     unfocusedIndicatorColor = Color.Transparent
                 ),
                 shape = RoundedCornerShape(24.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Default,
+                    capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
+                ),
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(max = 120.dp)

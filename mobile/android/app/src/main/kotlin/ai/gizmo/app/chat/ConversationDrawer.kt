@@ -271,11 +271,15 @@ private fun groupByDate(conversations: List<Conversation>): List<Pair<String, Li
         }
     }
 
+    // Sort each group by most recent first
+    val byRecent = Comparator<Conversation> { a, b ->
+        (b.updatedAt.ifEmpty { b.createdAt }).compareTo(a.updatedAt.ifEmpty { a.createdAt })
+    }
     return buildList {
-        if (todayList.isNotEmpty()) add("Today" to todayList)
-        if (yesterdayList.isNotEmpty()) add("Yesterday" to yesterdayList)
-        if (weekList.isNotEmpty()) add("Previous 7 Days" to weekList)
-        if (olderList.isNotEmpty()) add("Older" to olderList)
+        if (todayList.isNotEmpty()) add("Today" to todayList.sortedWith(byRecent))
+        if (yesterdayList.isNotEmpty()) add("Yesterday" to yesterdayList.sortedWith(byRecent))
+        if (weekList.isNotEmpty()) add("Previous 7 Days" to weekList.sortedWith(byRecent))
+        if (olderList.isNotEmpty()) add("Older" to olderList.sortedWith(byRecent))
     }
 }
 

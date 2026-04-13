@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -182,9 +183,10 @@ private fun AssistantBubble(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Content rendered as markdown
+        // Content rendered as markdown — memoized to avoid re-parsing on revisit
         if (message.displayContent.isNotEmpty()) {
-            Markdown(content = message.displayContent, modifier = Modifier.fillMaxWidth())
+            val content = remember(message.id, message.currentVariantIndex) { message.displayContent }
+            Markdown(content = content, modifier = Modifier.fillMaxWidth())
 
             // Detect download links (/api/media/ URLs)
             mediaUrlRegex.findAll(message.displayContent).forEach { match ->
