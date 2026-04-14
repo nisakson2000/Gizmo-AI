@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="services/ui/static/icon-192.png" alt="Gizmo" width="96" />
+
 # Gizmo
 
 **A fully local AI assistant — no cloud, no limits, no data leaving your machine.**
@@ -10,8 +12,6 @@
 [![TTS: Qwen3-TTS](https://img.shields.io/badge/TTS-Qwen3--TTS_1.7B-orange.svg)]()
 [![STT: Whisper](https://img.shields.io/badge/STT-Whisper-red.svg)]()
 [![Services: 6](https://img.shields.io/badge/Services-6_Containers-teal.svg)]()
-
----
 
 A complete self-hosted AI assistant running entirely on local hardware.
 9B LLM with vision, neural voice cloning, code execution, web search, task tracking —
@@ -94,7 +94,7 @@ bash scripts/start.sh            # Starts all 6 services
 ```
 
 | Service | Port | Role | GPU |
-|---------|------|------|-----|
+|---|---|---|---|
 | **gizmo-llama** | 8080 | LLM inference (Qwen3.5-9B Q8_0 + vision) | Yes |
 | **gizmo-orchestrator** | 9100 | FastAPI backend — routing, streaming, tools | No |
 | **gizmo-ui** | 3100 | SvelteKit web UI via nginx | No |
@@ -106,8 +106,9 @@ bash scripts/start.sh            # Starts all 6 services
 
 ## Features
 
-<details>
+<details open>
 <summary><strong>Chat & Conversation</strong></summary>
+<br>
 
 - Streaming chat with persistent server-side history and LLM-generated titles
 - Regenerate & edit — re-roll any response or edit a sent message, with `< 1/N >` variant navigation
@@ -119,8 +120,9 @@ bash scripts/start.sh            # Starts all 6 services
 
 </details>
 
-<details>
+<details open>
 <summary><strong>AI Capabilities</strong></summary>
+<br>
 
 - **Mode switcher** — 6 behavioral modes (Chat, Brainstorm, Coder, Research, Planner, Roleplay) + custom mode creation with prompt editor
 - **Usage analytics** — token counts, response times, and cloud cost comparison dashboard at `/analytics`
@@ -143,6 +145,7 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>Voice & TTS</strong></summary>
+<br>
 
 - **Streaming TTS** — sentence-level audio streaming via WebSocket (~3s to first audio vs 7-45s batch mode), with gapless browser playback
 - **Voice Studio** — upload reference audio, name and save voices, adjustable clip duration
@@ -156,6 +159,7 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>Code & Tools</strong></summary>
+<br>
 
 - **Sandbox** — 7 languages (Python, JavaScript, Bash, C, C++, Go, Lua) in isolated containers (no network, 256MB RAM, read-only fs)
 - **Code Playground** — `/code` route with syntax highlighting (highlight.js), resizable split pane, auto-save, copy/download, word wrap, output file display
@@ -168,6 +172,7 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>Patterns & Routing</strong></summary>
+<br>
 
 - **30 patterns** — Fabric-inspired cognitive templates (extract_wisdom, summarize, analyze_threat, etc.)
 - **Intelligent routing** — model sees only 3-8 relevant tools per request via keyword pre-routing
@@ -178,6 +183,7 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>Task Tracker</strong></summary>
+<br>
 
 - Built-in task and note management at `/tracker`
 - Tags, priorities, due dates, recurrence (daily/weekly/biweekly/monthly/yearly), subtasks
@@ -190,8 +196,9 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>UI & Accessibility</strong></summary>
+<br>
 
-- **9 Nintendo themes** — NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, Switch with console frames, sound effects, screen overlays, and boot animations
+- **10 themes** — Default dark theme + 9 Nintendo console themes (NES, SNES, GBA, N64, GameCube, Wii, DS, 3DS, Switch) with console frames, sound effects, screen overlays, and boot animations
 - **Keyboard shortcuts** — Ctrl+Shift+N (new chat), Ctrl+Shift+T (think), Ctrl+/ (focus), Escape (close)
 - **Mobile support** — swipe gestures, always-visible message actions on touch devices
 - **Accessibility** — focus trapping in modals, aria-expanded, sidebar keyboard nav, prefers-reduced-motion
@@ -204,6 +211,7 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary><strong>Android App</strong></summary>
+<br>
 
 - **Native Compose chat** — streaming responses, markdown rendering, syntax highlighting
 - **Multi-server profiles** — connect to LAN, Tailscale, or any Gizmo instance
@@ -231,9 +239,10 @@ bash scripts/start.sh            # Starts all 6 services
 
 <details>
 <summary>VRAM breakdown</summary>
+<br>
 
 | Component | VRAM | Notes |
-|-----------|------|-------|
+|---|---|---|
 | Qwen3.5-9B weights (Q8_0) | ~9.5 GB | Always loaded |
 | KV cache (Q8_0, 32K context) | ~6.2 GB | Grows with conversation |
 | Qwen3-TTS | ~4.0 GB | Auto-unloads after 60s idle |
@@ -249,7 +258,7 @@ bash scripts/start.sh            # Starts all 6 services
 Full documentation is available on the **[Wiki](https://github.com/nisakson2000/Gizmo/wiki)**.
 
 | Page | Description |
-|------|-------------|
+|---|---|
 | [How Local AI Works](https://github.com/nisakson2000/Gizmo/wiki/How-the-AI-Works) | First-principles explanation of LLMs and local AI |
 | [Setup Guide](https://github.com/nisakson2000/Gizmo/wiki/Setup) | Step-by-step installation |
 | [Usage Guide](https://github.com/nisakson2000/Gizmo/wiki/Usage) | Day-to-day usage |
