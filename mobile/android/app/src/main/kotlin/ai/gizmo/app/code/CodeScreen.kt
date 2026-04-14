@@ -253,6 +253,6 @@ fun CodeScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifier) 
             onClick = { showChat = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             containerColor = Accent, contentColor = BgPrimary
-        ) { Icon(Icons.AutoMirrored.Filled.Chat, "Ask AI") }
+        ) { Icon(Icons.AutoMirrored.Filled.Chat, "Ask Gizmo") }
     }
 }

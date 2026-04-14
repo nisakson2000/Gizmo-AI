@@ -3,6 +3,7 @@ package ai.gizmo.app.tracker
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -90,7 +91,7 @@ fun TrackerChat(serverUrl: String, onRefresh: () -> Unit, onDismiss: () -> Unit)
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BgPrimary))
         }, containerColor = BgPrimary
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
             LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 items(messages, key = { it.id }) { msg ->
                     if (msg.role == "user") {

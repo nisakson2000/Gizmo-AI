@@ -3,6 +3,7 @@ package ai.gizmo.app.code
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,12 +84,12 @@ fun CodeChat(serverUrl: String, code: String, language: String, onDismiss: () ->
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Ask AI", color = TextPrimary) },
+            TopAppBar(title = { Text("Ask Gizmo", color = TextPrimary) },
                 navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BgPrimary))
         }, containerColor = BgPrimary
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
             LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 items(messages, key = { it.id }) { msg ->
                     if (msg.role == "user") {

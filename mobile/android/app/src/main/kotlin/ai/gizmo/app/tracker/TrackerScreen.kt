@@ -233,10 +233,10 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
             }
         }
 
-        // FAB — aligned with CodeScreen's FAB position
+        // FAB — aligned vertically with the quick-add bar
         FloatingActionButton(
             onClick = { showChat = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 8.dp),
             containerColor = Accent,
             contentColor = BgPrimary
         ) {
