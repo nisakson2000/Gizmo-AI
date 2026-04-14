@@ -2,13 +2,13 @@
 
 import json
 import logging
-import os
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from llm import stream_chat
+from prompt_loader import load_prompt
 from sandbox import run_code
 
 logger = logging.getLogger("gizmo.error")
@@ -20,22 +20,8 @@ router = APIRouter()
 
 # --- Prompt ---
 
-_prompt_cache: str | None = None
-_prompt_mtime: float = 0.0
-
-
 def _load_code_prompt() -> str:
-    """Load the code chat system prompt, stripping comment lines. Cached with mtime check."""
-    global _prompt_cache, _prompt_mtime
-    if not CODE_PROMPT_PATH.exists():
-        return "You are a programming assistant. Help the user write, debug, and improve code."
-    mtime = os.path.getmtime(CODE_PROMPT_PATH)
-    if _prompt_cache is not None and mtime == _prompt_mtime:
-        return _prompt_cache
-    lines = CODE_PROMPT_PATH.read_text().splitlines()
-    _prompt_cache = "\n".join(line for line in lines if not line.startswith("#")).strip()
-    _prompt_mtime = mtime
-    return _prompt_cache
+    return load_prompt(CODE_PROMPT_PATH, "You are a programming assistant. Help the user write, debug, and improve code.")
 
 
 # --- Tool definitions (run_code only) ---

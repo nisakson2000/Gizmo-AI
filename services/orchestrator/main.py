@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import sqlite3
+from dataclasses import dataclass, field
 import subprocess
 import tempfile
 import time
@@ -35,8 +36,9 @@ from compaction import maybe_compact, get_conversation_summary
 from knowledge import maybe_extract_facts, get_relevant_facts, format_knowledge_facts
 from importance import score_message
 from router import route
+from prompt_loader import load_prompt
 from patterns import reload_patterns, list_patterns
-from modes import get_mode, get_mode_prompt, list_modes, save_mode_prompt, save_mode_config, create_mode, delete_mode, reload_modes
+from modes import get_mode, get_mode_prompt, list_modes, save_mode_prompt, save_mode_config, create_mode, delete_mode, reload_modes, BUILTIN_MODES
 from analytics import store_analytics, get_summary as analytics_summary, get_daily_breakdown, get_conversation_usage, get_cost_comparison, get_mode_breakdown
 from tracker import router as tracker_router
 from code_chat import router as code_chat_router
@@ -67,6 +69,61 @@ def _detect_repetition(text: str, min_seg: int = 50, min_repeats: int = 3) -> bo
         if all_match:
             return True
     return False
+
+
+@dataclass
+class StreamState:
+    """Mutable accumulator for processing a single LLM stream."""
+    full_response: str = ""
+    full_thinking: str = ""
+    tool_calls: list = field(default_factory=list)
+    usage_prompt: int = 0
+    usage_completion: int = 0
+    usage_total: int = 0
+    stopped: bool = False
+    _rep_check_len: int = 0
+
+
+async def _process_stream(stream, ws, state: StreamState, trace_id: str,
+                          tts_feed=None, log_suffix: str = ""):
+    """Process LLM stream events, dispatching to WebSocket and accumulating state.
+
+    Shared by both the initial stream and tool-round streams in ws_chat.
+    """
+    async for event in stream:
+        etype = event["type"]
+        if etype == "thinking":
+            state.full_thinking += event["content"]
+            await ws.send_json(event)
+        elif etype == "token":
+            state.full_response += event["content"]
+            await ws.send_json(event)
+            if tts_feed:
+                tts_feed(event["content"])
+            if len(state.full_response) - state._rep_check_len >= 200:
+                state._rep_check_len = len(state.full_response)
+                if _detect_repetition(state.full_response):
+                    state.full_response += _REPETITION_NOTICE
+                    await ws.send_json({"type": "token", "content": _REPETITION_NOTICE})
+                    conv_log.info("[%s] Repetition detected%s, stopping generation", trace_id, log_suffix)
+                    state.stopped = True
+                    break
+        elif etype == "usage":
+            state.usage_prompt += event.get("prompt_tokens", 0)
+            state.usage_completion += event.get("completion_tokens", 0)
+            state.usage_total += event.get("total_tokens", 0)
+        elif etype == "truncated":
+            state.full_response += _TRUNCATION_NOTICE
+            await ws.send_json({"type": "token", "content": _TRUNCATION_NOTICE})
+            conv_log.info("[%s] Response truncated at max_tokens%s", trace_id, log_suffix)
+        elif etype == "tool_call":
+            state.tool_calls.append(event)
+            await ws.send_json({"type": "tool_call", "tool": event["name"], "status": "running"})
+        elif etype == "error":
+            error_log.error("[%s] Stream error%s: %s", trace_id, log_suffix, event["error"])
+            await ws.send_json({"type": "error", "error": event["error"], "trace_id": trace_id})
+            state.stopped = True
+            break
 
 
 class SentenceBuffer:
@@ -452,36 +509,35 @@ def get_conversation_messages(conversation_id: str) -> list[dict]:
 # --- System Prompt ---
 
 
-def _load_prompt_file(path: Path, fallback: str = "") -> str:
-    """Load a prompt file, stripping comment lines (# prefix)."""
-    if not path.exists():
-        return fallback
-    text = path.read_text(encoding="utf-8")
-    lines = [line for line in text.splitlines() if not line.strip().startswith("#")]
-    return "\n".join(lines).strip()
-
-
 def load_constitution() -> str:
-    """Load the constitution (identity and principles)."""
-    return _load_prompt_file(CONSTITUTION_PATH, "You are Gizmo, a helpful local AI assistant.")
+    """Load the constitution (identity and principles). Cached with mtime check."""
+    return load_prompt(CONSTITUTION_PATH, "You are Gizmo, a helpful local AI assistant.")
 
 
 def load_chat_prompt() -> str:
-    """Load the general chat prompt (operational instructions for tools, memory, etc.)."""
-    return _load_prompt_file(CHAT_PROMPT_PATH)
+    """Load the general chat prompt (operational instructions). Cached with mtime check."""
+    return load_prompt(CHAT_PROMPT_PATH)
 
 
-def build_system_prompt(user_message: str = "", has_vision: bool = False,
-                        pattern: dict | None = None,
-                        recitation_context: str = "",
-                        conversation_summary: str = "",
-                        session_recall: str = "",
-                        cross_memory: str = "",
-                        knowledge_context: str = "",
-                        charmap_content: str = "",
-                        conversation_length: int = 0,
-                        mode: str = "chat") -> str:
+@dataclass
+class PromptContext:
+    """Context layers for system prompt assembly."""
+    pattern: dict | None = None
+    recitation_context: str = ""
+    conversation_summary: str = ""
+    session_recall: str = ""
+    cross_memory: str = ""
+    knowledge_context: str = ""
+    charmap_content: str = ""
+    has_vision: bool = False
+    conversation_length: int = 0
+    mode: str = "chat"
+
+
+def build_system_prompt(user_message: str = "", ctx: PromptContext | None = None) -> str:
     """Build the full system prompt with explicit layered assembly and token budget tracking."""
+    if ctx is None:
+        ctx = PromptContext()
     layers: dict[str, str] = {}
 
     # Layer 0: Identity (IMMUNE — always included)
@@ -493,45 +549,45 @@ def build_system_prompt(user_message: str = "", has_vision: bool = False,
     if chat_prompt:
         layers["chat_prompt"] = chat_prompt
 
-    if conversation_length >= IDENTITY_REINFORCE_MIN_MESSAGES:
+    if ctx.conversation_length >= IDENTITY_REINFORCE_MIN_MESSAGES:
         layers["identity_reminder"] = IDENTITY_REMINDER
 
     # Layer 0.5: Mode prompt (behavioral frame)
-    if mode and mode != "chat":
-        mode_prompt = get_mode_prompt(mode)
+    if ctx.mode and ctx.mode != "chat":
+        mode_prompt = get_mode_prompt(ctx.mode)
         if mode_prompt:
-            mode_data = get_mode(mode)
-            label = mode_data["label"] if mode_data else mode.capitalize()
+            mode_data = get_mode(ctx.mode)
+            label = mode_data["label"] if mode_data else ctx.mode.capitalize()
             layers["mode"] = f"--- Active Mode: {label} ---\n{mode_prompt}"
 
     # Layer 1: Context
-    if conversation_summary:
-        layers["conversation_summary"] = conversation_summary
+    if ctx.conversation_summary:
+        layers["conversation_summary"] = ctx.conversation_summary
 
-    if pattern:
-        layers["pattern"] = f"--- Active Analysis Pattern: {pattern['name']} ---\n{pattern['system_prompt']}"
+    if ctx.pattern:
+        layers["pattern"] = f"--- Active Analysis Pattern: {ctx.pattern['name']} ---\n{ctx.pattern['system_prompt']}"
 
-    if recitation_context:
-        layers["recitation"] = recitation_context
+    if ctx.recitation_context:
+        layers["recitation"] = ctx.recitation_context
 
-    if charmap_content:
-        layers["charmap"] = charmap_content
+    if ctx.charmap_content:
+        layers["charmap"] = ctx.charmap_content
 
-    if has_vision:
+    if ctx.has_vision:
         layers["vision"] = VISION_PROMPT
 
     # Layer 2: Memory recall (unified block)
-    if session_recall or cross_memory:
+    if ctx.session_recall or ctx.cross_memory:
         recall_parts = []
-        if session_recall:
-            recall_parts.append(session_recall)
-        if cross_memory:
-            recall_parts.append(cross_memory)
+        if ctx.session_recall:
+            recall_parts.append(ctx.session_recall)
+        if ctx.cross_memory:
+            recall_parts.append(ctx.cross_memory)
         layers["memory_recall"] = "\n\n".join(recall_parts)
 
     # Layer 3: Knowledge + BM25
-    if knowledge_context:
-        layers["knowledge_facts"] = knowledge_context
+    if ctx.knowledge_context:
+        layers["knowledge_facts"] = ctx.knowledge_context
 
     memories = get_relevant_memories(user_message)
     if memories:
@@ -930,13 +986,12 @@ async def api_get_mode(name: str):
     mode = get_mode(name)
     if not mode:
         raise HTTPException(status_code=404, detail="Mode not found")
-    return mode
+    return {**mode, "builtin": name in BUILTIN_MODES}
 
 
 @app.put("/api/modes/{name}")
 async def api_update_mode(name: str, request: Request):
     """Update an existing mode's system_prompt and/or config fields. Built-in modes are read-only."""
-    from modes import BUILTIN_MODES
     if name in BUILTIN_MODES:
         raise HTTPException(status_code=403, detail="Built-in modes cannot be edited")
 
@@ -1180,11 +1235,12 @@ async def ws_chat(ws: WebSocket):
 
             # Window first (needs to run before session recall formatting to deduplicate)
             conv_len = len(history_msgs)
-            temp_prompt = build_system_prompt(
-                clean_text, has_vision=has_vision, pattern=route_result.pattern,
+            pctx = PromptContext(
+                has_vision=has_vision, pattern=route_result.pattern,
                 recitation_context=recitation_context, conversation_summary=conv_summary,
                 charmap_content=route_result.charmap_content, conversation_length=conv_len,
                 mode=active_mode)
+            temp_prompt = build_system_prompt(clean_text, pctx)
             history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                            query_embedding=query_embedding,
                                            conversation_id=conversation_id)
@@ -1210,13 +1266,10 @@ async def ws_chat(ws: WebSocket):
                           trace_id, t_embed * 1000, t_recall * 1000, t_compact * 1000, t_knowledge * 1000)
 
             # Final system prompt with all context layers
-            system_prompt = build_system_prompt(
-                clean_text, has_vision=has_vision, pattern=route_result.pattern,
-                recitation_context=recitation_context, conversation_summary=conv_summary,
-                session_recall=session_recall, cross_memory=cross_memory_context,
-                knowledge_context=knowledge_context,
-                charmap_content=route_result.charmap_content, conversation_length=conv_len,
-                mode=active_mode)
+            pctx.session_recall = session_recall
+            pctx.cross_memory = cross_memory_context
+            pctx.knowledge_context = knowledge_context
+            system_prompt = build_system_prompt(clean_text, pctx)
             messages = build_messages(history_msgs, system_prompt)
 
             sentence_buffer = SentenceBuffer() if request_tts else None
@@ -1262,55 +1315,17 @@ async def ws_chat(ws: WebSocket):
                         tts_streaming_failed = True
 
             # Stream with selected tools
-            full_response = ""
-            full_thinking = ""
             executed_tool_calls = []  # Accumulate for DB persistence
-            tool_calls_pending = []
-            usage_prompt_tokens = 0
-            usage_completion_tokens = 0
-            usage_total_tokens = 0
+            sstate = StreamState()
             t_llm_start = time.perf_counter()
-            _rep_check_len = 0
-            async for event in stream_chat(messages, thinking_enabled=thinking,
-                                           tool_schemas=route_result.tool_schemas,
-                                           temperature=llm_temperature):
-                if event["type"] == "thinking":
-                    full_thinking += event["content"]
-                    await ws.send_json(event)
-                elif event["type"] == "token":
-                    full_response += event["content"]
-                    await ws.send_json(event)
-                    _feed_tts(event["content"])
-                    if len(full_response) - _rep_check_len >= 200:
-                        _rep_check_len = len(full_response)
-                        if _detect_repetition(full_response):
-                            full_response += _REPETITION_NOTICE
-                            await ws.send_json({"type": "token", "content": _REPETITION_NOTICE})
-                            conv_log.info("[%s] Repetition detected, stopping generation", trace_id)
-                            break
-                elif event["type"] == "usage":
-                    usage_prompt_tokens += event.get("prompt_tokens", 0)
-                    usage_completion_tokens += event.get("completion_tokens", 0)
-                    usage_total_tokens += event.get("total_tokens", 0)
-                elif event["type"] == "truncated":
-                    full_response += _TRUNCATION_NOTICE
-                    await ws.send_json({"type": "token", "content": _TRUNCATION_NOTICE})
-                    conv_log.info("[%s] Response truncated at max_tokens", trace_id)
-                elif event["type"] == "tool_call":
-                    tool_calls_pending.append(event)
-                    await ws.send_json({
-                        "type": "tool_call",
-                        "tool": event["name"],
-                        "status": "running",
-                    })
-                elif event["type"] == "error":
-                    error_log.error("[%s] Stream error: %s", trace_id, event["error"])
-                    await ws.send_json({
-                        "type": "error",
-                        "error": event["error"],
-                        "trace_id": trace_id,
-                    })
-                    break
+            await _process_stream(
+                stream_chat(messages, thinking_enabled=thinking,
+                            tool_schemas=route_result.tool_schemas,
+                            temperature=llm_temperature),
+                ws, sstate, trace_id, tts_feed=_feed_tts)
+            full_response = sstate.full_response
+            full_thinking = sstate.full_thinking
+            tool_calls_pending = sstate.tool_calls
 
             # Execute tool calls — multi-round loop (up to 5 rounds)
             max_tool_rounds = 5
@@ -1356,50 +1371,19 @@ async def ws_chat(ws: WebSocket):
                     })
 
                 # Continue generation with tool results
-                tool_calls_pending = []
-                _rep_check_len = len(full_response)
-                async for event in stream_chat(messages, thinking_enabled=False,
-                                               tool_schemas=route_result.tool_schemas,
-                                               temperature=llm_temperature):
-                    if event["type"] == "token":
-                        full_response += event["content"]
-                        await ws.send_json(event)
-                        _feed_tts(event["content"])
-                        if len(full_response) - _rep_check_len >= 200:
-                            _rep_check_len = len(full_response)
-                            if _detect_repetition(full_response):
-                                full_response += _REPETITION_NOTICE
-                                await ws.send_json({"type": "token", "content": _REPETITION_NOTICE})
-                                conv_log.info("[%s] Repetition detected (tool round %d), stopping", trace_id, tool_round)
-                                tool_calls_pending = []
-                                break
-                    elif event["type"] == "thinking":
-                        full_thinking += event["content"]
-                        await ws.send_json(event)
-                    elif event["type"] == "usage":
-                        usage_prompt_tokens += event.get("prompt_tokens", 0)
-                        usage_completion_tokens += event.get("completion_tokens", 0)
-                        usage_total_tokens += event.get("total_tokens", 0)
-                    elif event["type"] == "truncated":
-                        full_response += _TRUNCATION_NOTICE
-                        await ws.send_json({"type": "token", "content": _TRUNCATION_NOTICE})
-                        conv_log.info("[%s] Response truncated at max_tokens (tool round %d)", trace_id, tool_round)
-                    elif event["type"] == "tool_call":
-                        tool_calls_pending.append(event)
-                        await ws.send_json({
-                            "type": "tool_call",
-                            "tool": event["name"],
-                            "status": "running",
-                        })
-                    elif event["type"] == "error":
-                        error_log.error("[%s] Stream error (tool round %d): %s", trace_id, tool_round, event["error"])
-                        await ws.send_json({
-                            "type": "error",
-                            "error": event["error"],
-                            "trace_id": trace_id,
-                        })
-                        tool_calls_pending = []  # stop looping on error
-                        break
+                sstate.tool_calls = []
+                sstate._rep_check_len = len(sstate.full_response)
+                await _process_stream(
+                    stream_chat(messages, thinking_enabled=False,
+                                tool_schemas=route_result.tool_schemas,
+                                temperature=llm_temperature),
+                    ws, sstate, trace_id, tts_feed=_feed_tts,
+                    log_suffix=f" (tool round {tool_round})")
+                full_response = sstate.full_response
+                full_thinking = sstate.full_thinking
+                tool_calls_pending = sstate.tool_calls
+                if sstate.stopped:
+                    tool_calls_pending = []
 
             t_llm_total = time.perf_counter() - t_llm_start
 
@@ -1479,9 +1463,9 @@ async def ws_chat(ws: WebSocket):
                 # Store analytics (fire-and-forget — non-critical telemetry)
                 context_ms = int((t_embed + t_recall + t_compact + t_knowledge) * 1000)
                 response_ms = int(t_llm_total * 1000)
-                prompt_tok = usage_prompt_tokens or estimate_tokens(system_prompt + user_text)
-                completion_tok = usage_completion_tokens or estimate_tokens(full_response)
-                total_tok = usage_total_tokens or (prompt_tok + completion_tok)
+                prompt_tok = sstate.usage_prompt or estimate_tokens(system_prompt + user_text)
+                completion_tok = sstate.usage_completion or estimate_tokens(full_response)
+                total_tok = sstate.usage_total or (prompt_tok + completion_tok)
                 asyncio.create_task(asyncio.to_thread(
                     store_analytics, conversation_id, asst_msg_index,
                     prompt_tok, completion_tok, total_tok, response_ms,
@@ -1575,12 +1559,11 @@ async def rest_chat(
     rest_conv_len = len(history_msgs)
     conv_summary = get_conversation_summary(conversation_id)
 
-    temp_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
-                                      recitation_context=recitation_context,
-                                      conversation_summary=conv_summary,
-                                      charmap_content=route_result.charmap_content,
-                                      conversation_length=rest_conv_len,
-                                      mode=mode)
+    pctx = PromptContext(
+        pattern=route_result.pattern, recitation_context=recitation_context,
+        conversation_summary=conv_summary, charmap_content=route_result.charmap_content,
+        conversation_length=rest_conv_len, mode=mode)
+    temp_prompt = build_system_prompt(clean_text, pctx)
     context_length = max(2048, min(context_length, 131072))
     history_msgs = window_messages(history_msgs, temp_prompt, context_length,
                                    query_embedding=query_embedding,
@@ -1597,25 +1580,20 @@ async def rest_chat(
     knowledge_facts = get_relevant_facts(clean_text)
     knowledge_context = format_knowledge_facts(knowledge_facts) if knowledge_facts else ""
 
-    system_prompt = build_system_prompt(clean_text, pattern=route_result.pattern,
-                                        recitation_context=recitation_context,
-                                        conversation_summary=conv_summary,
-                                        session_recall=session_recall,
-                                        cross_memory=cross_memory_context,
-                                        knowledge_context=knowledge_context,
-                                        charmap_content=route_result.charmap_content,
-                                        conversation_length=rest_conv_len,
-                                        mode=mode)
+    pctx.session_recall = session_recall
+    pctx.cross_memory = cross_memory_context
+    pctx.knowledge_context = knowledge_context
+    system_prompt = build_system_prompt(clean_text, pctx)
     messages = build_messages(history_msgs, system_prompt)
 
     full_response = ""
     full_thinking = ""
     max_tool_rounds = 5
-    rest_prompt_tokens = 0
-    rest_completion_tokens = 0
-    rest_total_tokens = 0
+    usage_prompt_tokens = 0
+    usage_completion_tokens = 0
+    usage_total_tokens = 0
     tool_round = 0
-    t_rest_start = time.perf_counter()
+    t_llm_start = time.perf_counter()
 
     for _ in range(max_tool_rounds):
         tool_calls_pending = []
@@ -1628,9 +1606,9 @@ async def rest_chat(
             elif event["type"] == "thinking":
                 full_thinking += event["content"]
             elif event["type"] == "usage":
-                rest_prompt_tokens += event.get("prompt_tokens", 0)
-                rest_completion_tokens += event.get("completion_tokens", 0)
-                rest_total_tokens += event.get("total_tokens", 0)
+                usage_prompt_tokens += event.get("prompt_tokens", 0)
+                usage_completion_tokens += event.get("completion_tokens", 0)
+                usage_total_tokens += event.get("total_tokens", 0)
             elif event["type"] == "tool_call":
                 tool_calls_pending.append(event)
             elif event["type"] == "error":
@@ -1671,19 +1649,19 @@ async def rest_chat(
                 "content": result,
             })
 
-    t_rest_total = time.perf_counter() - t_rest_start
+    t_llm_total = time.perf_counter() - t_llm_start
     asst_msg_index = save_message(conversation_id, "assistant", full_response, full_thinking)
     conv_log.info("[REST] ASSISTANT (%s): %s", conversation_id, full_response[:500])
 
     if full_response:
         # Store analytics
-        rest_response_ms = int(t_rest_total * 1000)
-        prompt_tok = rest_prompt_tokens or estimate_tokens(system_prompt + clean_text)
-        completion_tok = rest_completion_tokens or estimate_tokens(full_response)
-        total_tok = rest_total_tokens or (prompt_tok + completion_tok)
+        response_ms = int(t_llm_total * 1000)
+        prompt_tok = usage_prompt_tokens or estimate_tokens(system_prompt + clean_text)
+        completion_tok = usage_completion_tokens or estimate_tokens(full_response)
+        total_tok = usage_total_tokens or (prompt_tok + completion_tok)
         asyncio.create_task(asyncio.to_thread(
             store_analytics, conversation_id, asst_msg_index,
-            prompt_tok, completion_tok, total_tok, rest_response_ms,
+            prompt_tok, completion_tok, total_tok, response_ms,
             0, tool_round, mode,
         ))
 

@@ -23,6 +23,7 @@ export interface ModeInfo {
 	description: string;
 	icon: string;
 	order: number;
+	builtin: boolean;
 }
 
 export const modes = writable<ModeInfo[]>([]);

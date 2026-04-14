@@ -7,8 +7,6 @@
 		system_prompt: string;
 	}
 
-	const BUILTIN = new Set(['chat', 'brainstorm', 'coder', 'research', 'planner', 'roleplay']);
-
 	let selected = $state<string | null>(null);
 	let detail = $state<ModeFull | null>(null);
 	let editPrompt = $state('');
@@ -81,7 +79,7 @@
 	}
 
 	async function deleteMode() {
-		if (!detail || BUILTIN.has(detail.name)) return;
+		if (!detail || detail.builtin) return;
 		try {
 			const resp = await fetch(`/api/modes/${detail.name}`, { method: 'DELETE' });
 			if (resp.ok) {
@@ -140,7 +138,7 @@
 		saving = false;
 	}
 
-	let isBuiltin = $derived(detail != null && BUILTIN.has(detail.name));
+	let isBuiltin = $derived(detail?.builtin ?? false);
 	let hasChanges = $derived(
 		detail != null && !isBuiltin && (editPrompt !== detail.system_prompt || editLabel !== detail.label || editDescription !== detail.description)
 	);
@@ -183,7 +181,7 @@
 								: 'text-text-secondary hover:bg-bg-tertiary/50 border border-transparent'}"
 						>
 							<span class="font-medium">{m.label}</span>
-							{#if !BUILTIN.has(m.name)}
+							{#if !m.builtin}
 								<span class="text-[10px] text-text-dim ml-1">custom</span>
 							{/if}
 						</button>

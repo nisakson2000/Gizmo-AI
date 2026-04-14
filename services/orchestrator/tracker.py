@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 import uuid
 from pathlib import Path
 
@@ -11,6 +10,7 @@ from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from llm import stream_chat
+from prompt_loader import load_prompt
 from tracker_db import (
     create_task, update_task, complete_task, delete_task,
     list_tasks, get_task, create_note, update_note,
@@ -27,22 +27,8 @@ router = APIRouter()
 
 # --- Helpers ---
 
-_prompt_cache: str | None = None
-_prompt_mtime: float = 0.0
-
-
 def _load_tracker_prompt() -> str:
-    """Load the tracker system prompt, stripping comment lines. Cached with mtime check."""
-    global _prompt_cache, _prompt_mtime
-    if not TRACKER_PROMPT_PATH.exists():
-        return "You are a task and note tracker assistant."
-    mtime = os.path.getmtime(TRACKER_PROMPT_PATH)
-    if _prompt_cache is not None and mtime == _prompt_mtime:
-        return _prompt_cache
-    lines = TRACKER_PROMPT_PATH.read_text().splitlines()
-    _prompt_cache = "\n".join(line for line in lines if not line.startswith("#")).strip()
-    _prompt_mtime = mtime
-    return _prompt_cache
+    return load_prompt(TRACKER_PROMPT_PATH, "You are a task and note tracker assistant.")
 
 
 def _build_context_summary_sync(max_tokens: int = 500) -> str:

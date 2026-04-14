@@ -107,6 +107,7 @@ def list_modes() -> list[dict]:
             "description": m["description"],
             "icon": m["icon"],
             "order": m["order"],
+            "builtin": m["name"] in BUILTIN_MODES,
         }
         for m in _mode_cache.values()
     ]
