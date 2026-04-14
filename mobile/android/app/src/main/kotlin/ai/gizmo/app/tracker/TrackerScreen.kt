@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import ai.gizmo.app.chat.FullScreenDialogProperties
 import ai.gizmo.app.model.TrackerNote
 import ai.gizmo.app.model.TrackerTask
 import ai.gizmo.app.network.GizmoApi
@@ -110,7 +110,7 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
     selectedTaskId?.let { id ->
         Dialog(
             onDismissRequest = { selectedTaskId = null; loadTasks() },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            properties = FullScreenDialogProperties
         ) {
             TaskDetail(api = api, taskId = id, onDismiss = { selectedTaskId = null; loadTasks() })
         }
@@ -118,7 +118,7 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
     selectedNoteId?.let { id ->
         Dialog(
             onDismissRequest = { selectedNoteId = null; loadNotes() },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            properties = FullScreenDialogProperties
         ) {
             NoteEditor(api = api, noteId = id, onDismiss = { selectedNoteId = null; loadNotes() })
         }
@@ -126,7 +126,7 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
     if (showChat) {
         Dialog(
             onDismissRequest = { showChat = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            properties = FullScreenDialogProperties
         ) {
             TrackerChat(serverUrl = serverUrl, onRefresh = { loadTasks(); loadNotes() }, onDismiss = { showChat = false })
         }

@@ -1,6 +1,7 @@
 package ai.gizmo.app.chat
 
 import android.content.Intent
+import android.net.Uri
 import android.widget.VideoView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,14 +32,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 
 private val IMAGE_EXTENSIONS = listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg")
 private val VIDEO_EXTENSIONS = listOf(".mp4", ".webm", ".mov", ".avi", ".mkv")
 
+/** Reusable full-screen dialog properties for all overlay screens. */
+val FullScreenDialogProperties = androidx.compose.ui.window.DialogProperties(
+    usePlatformDefaultWidth = false,
+    decorFitsSystemWindows = false
+)
+
+/** Resolve a potentially relative URL (starting with /) against a server base URL. */
+fun resolveMediaUrl(url: String, serverUrl: String): String =
+    if (url.startsWith("/")) "$serverUrl$url" else url
+
 @Composable
 fun MediaViewerDialog(url: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     val lowerUrl = url.lowercase()
     val isImage = IMAGE_EXTENSIONS.any { lowerUrl.contains(it) } ||
         lowerUrl.contains("/api/media/") && !VIDEO_EXTENSIONS.any { lowerUrl.contains(it) }
@@ -45,7 +57,7 @@ fun MediaViewerDialog(url: String, onDismiss: () -> Unit) {
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        properties = FullScreenDialogProperties
     ) {
         Box(
             modifier = Modifier
@@ -56,55 +68,31 @@ fun MediaViewerDialog(url: String, onDismiss: () -> Unit) {
                 isImage -> ImageViewer(url = url)
                 isVideo -> VideoViewer(url = url)
                 else -> {
-                    // For audio and other files, open in external app
-                    val context = LocalContext.current
-                    androidx.compose.runtime.LaunchedEffect(url) {
+                    LaunchedEffect(url) {
                         try {
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                data = android.net.Uri.parse(url)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         } catch (_: Exception) { }
                         onDismiss()
                     }
                 }
             }
 
-            // Close button
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
             ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(28.dp))
             }
 
-            // Open in browser button
-            val context = LocalContext.current
             IconButton(
                 onClick = {
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                        context.startActivity(intent)
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     } catch (_: Exception) { }
                 },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(16.dp)
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.OpenInNew,
-                    contentDescription = "Open externally",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open externally", tint = Color.White, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -124,18 +112,10 @@ private fun ImageViewer(url: String) {
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     scale = (scale * zoom).coerceIn(0.5f, 5f)
-                    offset = Offset(
-                        x = offset.x + pan.x,
-                        y = offset.y + pan.y
-                    )
+                    offset = Offset(x = offset.x + pan.x, y = offset.y + pan.y)
                 }
             }
-            .graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offset.x,
-                translationY = offset.y
-            )
+            .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
     )
 }
 
@@ -145,14 +125,11 @@ private fun VideoViewer(url: String) {
         factory = { ctx ->
             VideoView(ctx).apply {
                 setVideoPath(url)
-                setOnPreparedListener { mp ->
-                    mp.isLooping = false
-                    start()
-                }
+                setOnPreparedListener { it.isLooping = true; start() }
                 setOnErrorListener { _, _, _ -> true }
-                setOnCompletionListener { start() }
             }
         },
+        onRelease = { it.stopPlayback() },
         modifier = Modifier.fillMaxSize()
     )
 }

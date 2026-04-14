@@ -69,7 +69,7 @@ import ai.gizmo.app.ui.theme.TextDim
 import ai.gizmo.app.ui.theme.TextPrimary
 import ai.gizmo.app.ui.theme.TextSecondary
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import ai.gizmo.app.chat.FullScreenDialogProperties
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,7 +105,7 @@ fun CodeScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifier) 
     if (showChat) {
         Dialog(
             onDismissRequest = { showChat = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            properties = FullScreenDialogProperties
         ) {
             CodeChat(serverUrl = serverUrl, code = code, language = language, onDismiss = { showChat = false })
         }

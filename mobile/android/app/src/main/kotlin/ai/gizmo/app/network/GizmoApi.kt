@@ -85,12 +85,15 @@ class GizmoApi(private val serverUrl: String) {
          * Check GitHub releases for a newer app version.
          * Returns a Pair of (latestVersion, downloadUrl) if an update is available, null otherwise.
          */
+        private val ghClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .build()
+        }
+
         suspend fun checkForUpdate(currentVersion: String): Pair<String, String>? = withContext(Dispatchers.IO) {
             try {
-                val ghClient = OkHttpClient.Builder()
-                    .connectTimeout(10, TimeUnit.SECONDS)
-                    .readTimeout(10, TimeUnit.SECONDS)
-                    .build()
                 val request = Request.Builder()
                     .url("https://api.github.com/repos/nisakson2000/Gizmo/releases/latest")
                     .header("Accept", "application/vnd.github+json")

@@ -108,7 +108,7 @@ private fun UserBubble(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 if (!message.imageUrl.isNullOrEmpty()) {
-                    val fullImageUrl = if (message.imageUrl.startsWith("/")) "$serverUrl${message.imageUrl}" else message.imageUrl
+                    val fullImageUrl = resolveMediaUrl(message.imageUrl, serverUrl)
                     AsyncImage(
                         model = fullImageUrl,
                         contentDescription = "Attached image",
@@ -121,40 +121,10 @@ private fun UserBubble(
                     )
                 }
                 if (!message.videoUrl.isNullOrEmpty()) {
-                    val fullVideoUrl = if (message.videoUrl.startsWith("/")) "$serverUrl${message.videoUrl}" else message.videoUrl
-                    Surface(
-                        onClick = { onViewMedia(fullVideoUrl) },
-                        shape = RoundedCornerShape(8.dp),
-                        color = BgTertiary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = null, tint = Accent, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Video attachment", color = TextPrimary, fontSize = 13.sp)
-                        }
-                    }
+                    AttachmentChip("Video attachment", resolveMediaUrl(message.videoUrl, serverUrl), onViewMedia)
                 }
                 if (!message.audioUrl.isNullOrEmpty()) {
-                    val fullAudioUrl = if (message.audioUrl.startsWith("/")) "$serverUrl${message.audioUrl}" else message.audioUrl
-                    Surface(
-                        onClick = { onViewMedia(fullAudioUrl) },
-                        shape = RoundedCornerShape(8.dp),
-                        color = BgTertiary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = null, tint = Accent, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Audio attachment", color = TextPrimary, fontSize = 13.sp)
-                        }
-                    }
+                    AttachmentChip("Audio attachment", resolveMediaUrl(message.audioUrl, serverUrl), onViewMedia)
                 }
                 if (message.displayContent.isNotEmpty()) {
                     Text(text = message.displayContent, color = TextPrimary)
@@ -212,7 +182,7 @@ private fun AssistantBubble(
 
         // Video player
         if (!message.videoUrl.isNullOrEmpty()) {
-            val fullUrl = if (message.videoUrl.startsWith("/")) "$serverUrl${message.videoUrl}" else message.videoUrl
+            val fullUrl = resolveMediaUrl(message.videoUrl, serverUrl)
             Box(modifier = Modifier.clickable { onViewMedia(fullUrl) }) {
                 AndroidView(
                     factory = { ctx ->
@@ -325,6 +295,25 @@ private fun DownloadChip(label: String, url: String, onDownload: (String) -> Uni
         shape = RoundedCornerShape(8.dp),
         color = BgTertiary,
         modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Icon(Icons.Default.Download, contentDescription = null, tint = Accent, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, color = TextPrimary, fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
+private fun AttachmentChip(label: String, url: String, onViewMedia: (String) -> Unit) {
+    Surface(
+        onClick = { onViewMedia(url) },
+        shape = RoundedCornerShape(8.dp),
+        color = BgTertiary,
+        modifier = Modifier.padding(bottom = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
