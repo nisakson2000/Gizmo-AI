@@ -75,6 +75,8 @@ import ai.gizmo.app.ui.theme.TextPrimary
 import ai.gizmo.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
+private val STATUS_FILTERS = listOf(null to "All", "todo" to "Todo", "in_progress" to "In Progress", "done" to "Done", "blocked" to "Blocked")
+
 private val PRIORITY_COLORS = mapOf(
     "urgent" to Color(0xFFE06060), "high" to Color(0xFFE09040),
     "medium" to Color(0xFFD4A574), "low" to Color(0xFF666666)
@@ -150,8 +152,7 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val statuses = listOf(null to "All", "todo" to "Todo", "in_progress" to "In Progress", "done" to "Done", "blocked" to "Blocked")
-                        items(statuses) { (value, label) ->
+                        items(STATUS_FILTERS) { (value, label) ->
                             FilterChip(
                                 selected = statusFilter == value, onClick = { statusFilter = value },
                                 label = { Text(label, fontSize = 12.sp) },
@@ -214,8 +215,8 @@ fun TrackerScreen(api: GizmoApi, serverUrl: String, modifier: Modifier = Modifie
                         }) { Icon(Icons.Default.Add, "Add Note", tint = Accent) }
                     }
 
+                    val sorted = remember(notes.toList()) { notes.sortedByDescending { it.pinned } }
                     LazyColumn(modifier = Modifier.weight(1f)) {
-                        val sorted = notes.sortedByDescending { it.pinned }
                         items(sorted, key = { it.id }) { note ->
                             NoteItem(note = note, onClick = { selectedNoteId = note.id }, onDelete = {
                                 notes.removeAll { it.id == note.id }

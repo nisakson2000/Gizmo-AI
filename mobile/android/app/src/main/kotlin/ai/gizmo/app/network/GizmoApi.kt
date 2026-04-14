@@ -102,7 +102,7 @@ class GizmoApi(private val serverUrl: String) {
             }
             }
         } catch (e: Exception) {
-            android.util.Log.d("GizmoApi", "${e.message}"); emptyList()
+            android.util.Log.d("GizmoApi", "getConversations: ${e.message}"); emptyList()
         }
     }
 
@@ -152,7 +152,7 @@ class GizmoApi(private val serverUrl: String) {
                 .url("$baseUrl/api/conversations/$id")
                 .delete()
                 .build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             android.util.Log.d("GizmoApi", "deleteConversation: ${e.message}")
             false
@@ -167,7 +167,7 @@ class GizmoApi(private val serverUrl: String) {
                 .url("$baseUrl/api/conversations/$id")
                 .patch(body)
                 .build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             android.util.Log.d("GizmoApi", "renameConversation: ${e.message}")
             false
@@ -193,7 +193,7 @@ class GizmoApi(private val serverUrl: String) {
             }
             }
         } catch (e: Exception) {
-            android.util.Log.d("GizmoApi", "${e.message}"); emptyList()
+            android.util.Log.d("GizmoApi", "searchConversations: ${e.message}"); emptyList()
         }
     }
 
@@ -271,7 +271,7 @@ class GizmoApi(private val serverUrl: String) {
                     .url("$baseUrl/api/conversations/$conversationId/messages-from/$index")
                     .delete()
                     .build()
-                client.newCall(request).execute().isSuccessful
+                client.newCall(request).execute().use { it.isSuccessful }
             } catch (e: Exception) {
                 android.util.Log.d("GizmoApi", "deleteMessagesFrom: ${e.message}")
                 false
@@ -393,7 +393,7 @@ class GizmoApi(private val serverUrl: String) {
             }
             }
         } catch (e: Exception) {
-            android.util.Log.d("GizmoApi", "${e.message}"); emptyList()
+            android.util.Log.d("GizmoApi", "getVoices: ${e.message}"); emptyList()
         }
     }
 
@@ -409,7 +409,7 @@ class GizmoApi(private val serverUrl: String) {
                     .addFormDataPart("max_duration", maxDuration.toString())
                     .build()
                 val request = Request.Builder().url("$baseUrl/api/voices").post(body).build()
-                client.newCall(request).execute().isSuccessful
+                client.newCall(request).execute().use { it.isSuccessful }
             } catch (e: Exception) {
                 android.util.Log.d("GizmoApi", "uploadVoice: ${e.message}")
                 false
@@ -419,7 +419,7 @@ class GizmoApi(private val serverUrl: String) {
     suspend fun deleteVoice(id: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$baseUrl/api/voices/$id").delete().build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             android.util.Log.d("GizmoApi", "deleteVoice: ${e.message}")
             false
@@ -477,7 +477,7 @@ class GizmoApi(private val serverUrl: String) {
                     .url("$baseUrl/api/modes")
                     .post(json.toRequestBody("application/json".toMediaType()))
                     .build()
-                client.newCall(request).execute().isSuccessful
+                client.newCall(request).execute().use { it.isSuccessful }
             } catch (e: Exception) { android.util.Log.d("GizmoApi", "createMode: ${e.message}"); false }
         }
 
@@ -493,14 +493,14 @@ class GizmoApi(private val serverUrl: String) {
                     .url("$baseUrl/api/modes/$name")
                     .put(json.toRequestBody("application/json".toMediaType()))
                     .build()
-                client.newCall(request).execute().isSuccessful
+                client.newCall(request).execute().use { it.isSuccessful }
             } catch (e: Exception) { android.util.Log.d("GizmoApi", "updateMode: ${e.message}"); false }
         }
 
     suspend fun deleteMode(name: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$baseUrl/api/modes/$name").delete().build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "deleteMode: ${e.message}"); false }
     }
 
@@ -552,7 +552,7 @@ class GizmoApi(private val serverUrl: String) {
                 .add("subdir", subdir)
                 .build()
             val request = Request.Builder().url("$baseUrl/api/memory/write").post(body).build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "writeMemory: ${e.message}"); false }
     }
 
@@ -561,7 +561,7 @@ class GizmoApi(private val serverUrl: String) {
             val request = Request.Builder()
                 .url("$baseUrl/api/memory/${Uri.encode(subdir)}/${Uri.encode(filename)}")
                 .delete().build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "deleteMemory: ${e.message}"); false }
     }
 
@@ -594,7 +594,7 @@ class GizmoApi(private val serverUrl: String) {
             }
             }
         } catch (e: Exception) {
-            android.util.Log.d("GizmoApi", "${e.message}"); emptyList()
+            android.util.Log.d("GizmoApi", "getModes: ${e.message}"); emptyList()
         }
     }
 
@@ -615,7 +615,7 @@ class GizmoApi(private val serverUrl: String) {
             }.toList()
             }
         } catch (e: Exception) {
-            android.util.Log.d("GizmoApi", "${e.message}"); emptyList()
+            android.util.Log.d("GizmoApi", "getServiceHealth: ${e.message}"); emptyList()
         }
     }
 
@@ -699,7 +699,7 @@ class GizmoApi(private val serverUrl: String) {
             val json = JSONObject(fields).toString()
             val request = Request.Builder().url("$baseUrl/api/tracker/tasks/$id")
                 .patch(json.toRequestBody("application/json".toMediaType())).build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "updateTask: ${e.message}"); false }
     }
 
@@ -707,14 +707,14 @@ class GizmoApi(private val serverUrl: String) {
         try {
             val request = Request.Builder().url("$baseUrl/api/tracker/tasks/$id/complete")
                 .patch("{}".toRequestBody("application/json".toMediaType())).build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "completeTask: ${e.message}"); false }
     }
 
     suspend fun deleteTask(id: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$baseUrl/api/tracker/tasks/$id").delete().build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "deleteTask: ${e.message}"); false }
     }
 
@@ -753,14 +753,14 @@ class GizmoApi(private val serverUrl: String) {
             val json = JSONObject(fields).toString()
             val request = Request.Builder().url("$baseUrl/api/tracker/notes/$id")
                 .patch(json.toRequestBody("application/json".toMediaType())).build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "updateNote: ${e.message}"); false }
     }
 
     suspend fun deleteNote(id: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$baseUrl/api/tracker/notes/$id").delete().build()
-            client.newCall(request).execute().isSuccessful
+            client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) { android.util.Log.d("GizmoApi", "deleteNote: ${e.message}"); false }
     }
 
