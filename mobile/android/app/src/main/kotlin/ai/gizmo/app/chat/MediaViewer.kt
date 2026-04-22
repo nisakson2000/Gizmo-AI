@@ -28,7 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -51,8 +53,7 @@ fun resolveMediaUrl(url: String, serverUrl: String): String =
 fun MediaViewerDialog(url: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val lowerUrl = url.lowercase()
-    val isImage = IMAGE_EXTENSIONS.any { lowerUrl.contains(it) } ||
-        lowerUrl.contains("/api/media/") && !VIDEO_EXTENSIONS.any { lowerUrl.contains(it) }
+    val isImage = IMAGE_EXTENSIONS.any { lowerUrl.contains(it) }
     val isVideo = VIDEO_EXTENSIONS.any { lowerUrl.contains(it) }
 
     Dialog(
@@ -102,6 +103,7 @@ fun MediaViewerDialog(url: String, onDismiss: () -> Unit) {
 private fun ImageViewer(url: String) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
     AsyncImage(
         model = url,
@@ -109,10 +111,17 @@ private fun ImageViewer(url: String) {
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .fillMaxSize()
+            .onSizeChanged { containerSize = it }
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.5f, 5f)
-                    offset = Offset(x = offset.x + pan.x, y = offset.y + pan.y)
+                    val newScale = (scale * zoom).coerceIn(0.5f, 5f)
+                    val maxX = maxOf(0f, (newScale - 1f) * containerSize.width / 2f)
+                    val maxY = maxOf(0f, (newScale - 1f) * containerSize.height / 2f)
+                    scale = newScale
+                    offset = Offset(
+                        x = (offset.x + pan.x).coerceIn(-maxX, maxX),
+                        y = (offset.y + pan.y).coerceIn(-maxY, maxY)
+                    )
                 }
             }
             .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
