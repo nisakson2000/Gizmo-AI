@@ -5,14 +5,17 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,10 +95,32 @@ fun MessageList(
             streamingThinking.isNotEmpty() ||
             streamingToolCalls.isNotEmpty()
 
+    var previousMessageSize by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(messages.size, streamingContent.length, streamingThinking.length, streamingToolCalls.size) {
         val totalItems = listState.layoutInfo.totalItemsCount
-        if (totalItems > 0 && (isAtBottom || generating)) {
-            listState.animateScrollToItem(totalItems - 1)
+        // "Just loaded" = conversation switched in / opened fresh. Always snap to the
+        // last message, like desktop chat apps.
+        val justLoaded = previousMessageSize == 0 && messages.isNotEmpty()
+        if (totalItems > 0) {
+            when {
+                justLoaded -> listState.scrollToItem(totalItems - 1)
+                isAtBottom || generating -> listState.animateScrollToItem(totalItems - 1)
+            }
+        }
+        previousMessageSize = messages.size
+    }
+
+    // When the IME opens/closes the viewport shrinks/grows under us. If the user was
+    // already tracking the bottom, keep them pinned there so the last message doesn't
+    // slide out of view when the keyboard animates in.
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(imeBottom) {
+        val totalItems = listState.layoutInfo.totalItemsCount
+        if (totalItems == 0) return@LaunchedEffect
+        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+        if (lastVisibleIndex >= totalItems - 1) {
+            listState.animateScrollBy(Float.MAX_VALUE)
         }
     }
 

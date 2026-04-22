@@ -499,6 +499,12 @@ class ChatViewModel(
                     activeConversationId.value = event.conversationId
                     finalizeAssistantMessage()
                     connectionState.value = ConnectionState.CONNECTED
+                    // New conversation may not have landed in the drawer yet (Title event
+                    // is async and can race/drop). Reconcile against the server list.
+                    if (event.conversationId.isNotBlank() &&
+                        conversations.none { it.id == event.conversationId }) {
+                        loadConversations()
+                    }
                 }
                 is ServerEvent.Error -> {
                     messages.add(Message(

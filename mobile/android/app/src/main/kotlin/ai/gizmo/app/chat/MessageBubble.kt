@@ -121,7 +121,24 @@ private fun UserBubble(
                     )
                 }
                 if (!message.videoUrl.isNullOrEmpty()) {
-                    AttachmentChip("Video attachment", resolveMediaUrl(message.videoUrl, serverUrl), onViewMedia)
+                    val fullVideoUrl = resolveMediaUrl(message.videoUrl, serverUrl)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clickable { onViewMedia(fullVideoUrl) }
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                VideoView(ctx).apply {
+                                    setVideoPath(fullVideoUrl)
+                                    setOnPreparedListener { mp -> mp.isLooping = true; start() }
+                                    setOnErrorListener { _, _, _ -> true }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(200.dp)
+                        )
+                    }
                 }
                 if (!message.audioUrl.isNullOrEmpty()) {
                     AttachmentChip("Audio attachment", resolveMediaUrl(message.audioUrl, serverUrl), onViewMedia)

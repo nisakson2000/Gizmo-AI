@@ -56,9 +56,16 @@ import ai.gizmo.app.ui.theme.ErrorColor
 import ai.gizmo.app.ui.theme.TextDim
 import ai.gizmo.app.ui.theme.TextPrimary
 import ai.gizmo.app.ui.theme.TextSecondary
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// Saves must outlive the TaskDetail composable — otherwise dismissing the dialog within
+// the debounce window cancels the in-flight save and the edit is lost.
+private val taskSaveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +86,7 @@ fun TaskDetail(api: GizmoApi, taskId: String, onDismiss: () -> Unit) {
 
     fun save(fields: Map<String, Any>) {
         saveJob?.cancel()
-        saveJob = scope.launch { delay(800); api.updateTask(taskId, fields) }
+        saveJob = taskSaveScope.launch { delay(800); api.updateTask(taskId, fields) }
     }
 
     LaunchedEffect(taskId) {
