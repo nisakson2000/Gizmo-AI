@@ -310,6 +310,82 @@ sudo firewall-cmd --reload
 
 ---
 
+## Stack Control Service (Optional)
+
+The **stack-control** service is a tiny host-side HTTP daemon that lets remote clients (primarily the Android app) start and stop the Gizmo stack over Tailscale. It runs **outside** Podman as a systemd user service — the orchestrator can't control the stack it lives inside, so this sidecar on port 9101 fills that gap.
+
+### What it does
+
+Four endpoints on port 9101:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/health` | GET | Liveness probe — `{"status": "healthy"}` |
+| `/api/system/status` | GET | Per-container state and uptime |
+| `/api/system/start` | POST | `podman compose up -d` (180s timeout, idempotent) |
+| `/api/system/stop` | POST | `podman compose stop` (60s timeout, idempotent; does NOT run `compose down` — volumes and networks are preserved) |
+
+All endpoints return JSON. There is no authentication.
+
+### Install
+
+```bash
+bash services/stack-control/install.sh
+```
+
+The installer:
+1. Enables **linger** for your user (`loginctl enable-linger`) — required so the systemd user service runs without an active login session and survives reboot
+2. Copies the unit file to `~/.config/systemd/user/gizmo-stack-control.service`
+3. Runs `systemctl --user daemon-reload && systemctl --user enable --now gizmo-stack-control`
+4. Prints verification commands
+
+### Verify
+
+```bash
+systemctl --user status gizmo-stack-control        # → active (running)
+curl http://localhost:9101/health                  # → {"status":"healthy"}
+curl http://localhost:9101/api/system/status       # → JSON with containers list
+curl -X POST http://localhost:9101/api/system/stop
+curl -X POST http://localhost:9101/api/system/start
+```
+
+### Firewall and security — read this
+
+Port 9101 has **no authentication**. The trust model is identical to the rest of the Gizmo stack: trust the network. Only expose port 9101 over Tailscale; never forward it on your public router.
+
+- Tailscale: port 9101 is reachable on your Tailnet IP automatically. Nothing to configure.
+- Local firewall: on Fedora / Bazzite, the `firewalld` default zone blocks inbound 9101 from non-Tailscale interfaces, which is what you want. Do not add a `--permanent` allow rule for 9101 on the `public` zone.
+- Do not set up `tailscale serve` or nginx reverse-proxying for this port. It's intentionally a separate, locally-bound plane.
+
+### Config
+
+Environment variables (edit `~/.config/systemd/user/gizmo-stack-control.service` after `daemon-reload` to change):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GIZMO_COMPOSE_DIR` | `%h/gizmo` | Directory containing `docker-compose.yml` |
+| `GIZMO_COMPOSE_PROJECT` | `gizmo` | podman-compose project label filter |
+| `PORT` | `9101` | Listen port |
+| `BIND_ADDR` | `0.0.0.0` | Listen address |
+
+### Uninstall
+
+```bash
+systemctl --user disable --now gizmo-stack-control
+rm ~/.config/systemd/user/gizmo-stack-control.service
+systemctl --user daemon-reload
+# optional: disable linger
+sudo loginctl disable-linger "$USER"
+```
+
+### Troubleshooting
+
+- **`podman: command not found` in journal** — your `~/.local/bin` is not in `PATH`. The unit sets `PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin` by default; if `podman-compose` is installed somewhere else, edit `Environment=PATH=...` accordingly.
+- **Start hangs for >180s** — usually an image is being pulled or built. Check `journalctl --user -u gizmo-stack-control` and run `podman compose up -d` manually in `GIZMO_COMPOSE_DIR` to see the actual blocker.
+- **Service keeps restarting** — `systemctl --user status gizmo-stack-control` and `journalctl --user -u gizmo-stack-control -n 50`. Port 9101 may already be in use (`ss -ltnp | grep 9101`).
+
+---
+
 ## Android App (Optional)
 
 Sideload the Gizmo Android app for one-tap access from your phone.

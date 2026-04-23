@@ -52,3 +52,12 @@ services:
     gpu: false
     health: /health
     description: "faster-whisper — CPU-based speech-to-text transcription"
+
+  stack_control:
+    container: null  # host-side systemd user service, not a podman container
+    host: localhost
+    port: 9101
+    host_port: 9101
+    gpu: false
+    health: /health
+    description: "Stack control — host-side start/stop API for remote clients (runs outside podman)"

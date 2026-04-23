@@ -101,6 +101,7 @@ bash scripts/start.sh            # Starts all 6 services
 | **gizmo-tts** | 8400 | Qwen3-TTS neural voice cloning | Yes |
 | **gizmo-whisper** | 8200 | faster-whisper speech-to-text | No |
 | **gizmo-searxng** | 8300 | Self-hosted web search | No |
+| stack-control | 9101 | Host-side start/stop API for remote clients (runs outside podman — see [Setup](https://github.com/nisakson2000/Gizmo/wiki/Setup#stack-control-service)) | No |
 
 ---
 
